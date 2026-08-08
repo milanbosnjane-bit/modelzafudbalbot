@@ -41,6 +41,8 @@ WorkingDirectory=$ROOT
 ExecStart=$ROOT/scripts/server/scheduler.sh
 Restart=always
 RestartSec=15
+KillSignal=SIGTERM
+TimeoutStopSec=10
 Environment=PYTHONUTF8=1
 Environment=LOCAL_MODE=true
 Environment=DATABASE_URL=sqlite+aiosqlite:///./data/football_roi.db

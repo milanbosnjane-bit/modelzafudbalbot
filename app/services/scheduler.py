@@ -140,18 +140,33 @@ async def main():
     scheduler.start()
     logger.info("scheduler_started")
 
+    loop = asyncio.get_running_loop()
     stop_event = asyncio.Event()
 
-    def shutdown(sig, frame):
-        logger.info("shutdown_signal", signal=sig)
+    def request_stop(signal_name: str) -> None:
+        if stop_event.is_set():
+            return
+        logger.info("shutdown_signal", signal=signal_name)
+        # wait=False: in-flight ingest jobs must not hold systemd for its stop timeout.
+        scheduler.shutdown(wait=False)
         stop_event.set()
 
-    signal.signal(signal.SIGINT, shutdown)
-    signal.signal(signal.SIGTERM, shutdown)
+    for sig in (signal.SIGINT, signal.SIGTERM):
+        try:
+            loop.add_signal_handler(sig, request_stop, sig.name)
+        except NotImplementedError:
+            # Windows has no loop signal support; hop back onto the loop by hand.
+            signal.signal(
+                sig,
+                lambda num, _frame: loop.call_soon_threadsafe(
+                    request_stop, signal.Signals(num).name
+                ),
+            )
 
     await stop_event.wait()
-    scheduler.shutdown()
+    logger.info("scheduler_stopped")
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+    sys.exit(0)

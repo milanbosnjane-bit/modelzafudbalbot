@@ -45,6 +45,31 @@ for job in scheduler.get_jobs():
 """
 
 
+DROPIN_CMD = r"""
+set -e
+DIR="$HOME/.config/systemd/user/football-dc-scheduler.service.d"
+mkdir -p "$DIR"
+cat > "$DIR/timeout.conf" <<'EOF'
+[Service]
+KillSignal=SIGTERM
+TimeoutStopSec=10
+EOF
+systemctl --user daemon-reload
+echo "drop-in:"
+cat "$DIR/timeout.conf"
+systemctl --user show football-dc-scheduler.service -p TimeoutStopUSec -p KillSignal
+"""
+
+RESTART_TIMED_CMD = r"""
+start=$(date +%s%3N)
+systemctl --user restart football-dc-scheduler.service
+end=$(date +%s%3N)
+echo "restart trajao: $((end-start)) ms"
+sleep 3
+echo -n "is-active: "; systemctl --user is-active football-dc-scheduler.service
+"""
+
+
 def safe_print(text: str) -> None:
     sys.stdout.buffer.write((text + "\n").encode("utf-8", errors="replace"))
     sys.stdout.buffer.flush()
@@ -73,6 +98,10 @@ def main() -> int:
     if not verify_only:
         sftp.put(str(local), f"{REMOTE}/app/services/scheduler.py")
         safe_print("  upload scheduler.py")
+        unit_installer = ROOT / "scripts" / "server" / "install_systemd.sh"
+        if unit_installer.is_file():
+            sftp.put(str(unit_installer), f"{REMOTE}/scripts/server/install_systemd.sh")
+            safe_print("  upload install_systemd.sh")
     with sftp.open("/tmp/_verify_scheduler.py", "w") as fh:
         fh.write(VERIFY_SCRIPT)
     sftp.close()
@@ -87,14 +116,11 @@ def main() -> int:
     safe_print(run(client, f"{env} venv/bin/python /tmp/_verify_scheduler.py 2>&1"))
 
     if not verify_only:
-        safe_print("=== Restart football-dc-scheduler.service ===")
-        safe_print(
-            run(
-                client,
-                "systemctl --user restart football-dc-scheduler.service 2>&1; sleep 6; "
-                "systemctl --user is-active football-dc-scheduler.service 2>&1",
-            )
-        )
+        safe_print("=== systemd drop-in: TimeoutStopSec ===")
+        safe_print(run(client, DROPIN_CMD))
+
+        safe_print("=== Restart football-dc-scheduler.service (mereno) ===")
+        safe_print(run(client, RESTART_TIMED_CMD, timeout=300))
 
         safe_print("=== Scheduler log (poslednjih 12 linija) ===")
         safe_print(run(client, "journalctl --user -u football-dc-scheduler --no-pager -n 12 2>&1"))
