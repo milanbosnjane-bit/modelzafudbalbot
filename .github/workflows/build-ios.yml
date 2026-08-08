@@ -73,3 +73,18 @@ jobs:
           path: ios_app/FootballROIBot.ipa
           if-no-files-found: error
           retention-days: 30
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ios-build-${{ github.run_number }}
+          name: Football ROIBot iOS Build ${{ github.run_number }}
+          body: |
+            Unsigned IPA for sideloading (AltStore / Sideloadly).
+            Commit: ${{ github.sha }}
+          files: ios_app/FootballROIBot.ipa
+          draft: false
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
