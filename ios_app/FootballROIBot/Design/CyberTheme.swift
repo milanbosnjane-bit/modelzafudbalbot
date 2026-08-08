@@ -9,6 +9,7 @@ enum CyberColors {
     static let panelFill = Color(hex: "0A0A10").opacity(0.72)
     static let panelFillHighlight = Color(hex: "12121C").opacity(0.55)
     static let cyan = Color(hex: "00F0FF")
+    static let skyBlue = Color(hex: "00BFFF")
     static let green = Color(hex: "00FF66")
     static let red = Color(hex: "FF0055")
     static let purple = Color(hex: "9D00FF")

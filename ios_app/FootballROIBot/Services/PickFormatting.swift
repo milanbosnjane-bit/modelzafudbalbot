@@ -141,4 +141,14 @@ enum PickFormatter {
             ? String(format: "%.0f", value)
             : String(format: "%.1f", value)
     }
+
+    /// Kickoff u srpskom vremenu (Europe/Belgrade), npr. "🕒 POČETAK: 21:00 (srpsko vreme)".
+    static func serbianKickoffText(_ date: Date?) -> String? {
+        guard let date else { return nil }
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "sr_RS")
+        formatter.timeZone = TimeZone(identifier: "Europe/Belgrade")
+        formatter.dateFormat = "HH:mm"
+        return "🕒 POČETAK: \(formatter.string(from: date)) (srpsko vreme)"
+    }
 }

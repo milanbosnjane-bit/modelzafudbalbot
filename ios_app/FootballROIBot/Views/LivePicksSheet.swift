@@ -13,8 +13,8 @@ struct LivePicksSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "scope")
                             .font(.system(size: 36))
-                            .foregroundStyle(CyberColors.green.opacity(0.7))
-                            .shadow(color: CyberColors.green.opacity(0.5), radius: 10)
+                            .foregroundStyle(CyberColors.skyBlue.opacity(0.7))
+                            .shadow(color: CyberColors.skyBlue.opacity(0.5), radius: 10)
                         Text("Nema aktivnih pickova danas")
                             .font(.headline)
                             .foregroundStyle(CyberColors.textSecondary)
@@ -51,19 +51,31 @@ struct LivePickCard: View {
         PickFormatter.serbianTip(market: pick.market, selection: pick.selection)
     }
 
+    private var kickoffText: String? {
+        PickFormatter.serbianKickoffText(pick.kickoff)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top, spacing: 10) {
                 Text("#\(pick.rank)")
                     .font(.system(size: 14, weight: .black, design: .monospaced))
-                    .foregroundStyle(CyberColors.green)
-                    .shadow(color: CyberColors.green.opacity(0.7), radius: 6)
+                    .foregroundStyle(CyberColors.skyBlue)
+                    .shadow(color: CyberColors.skyBlue.opacity(0.7), radius: 6)
 
-                Text(pick.match)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: CyberColors.cyan.opacity(0.25), radius: 4)
-                    .fixedSize(horizontal: false, vertical: true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(pick.match)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.white)
+                        .shadow(color: CyberColors.skyBlue.opacity(0.2), radius: 4)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    if let kickoffText {
+                        Text(kickoffText)
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(CyberColors.skyBlue.opacity(0.9))
+                    }
+                }
             }
 
             Text(tipText)
@@ -99,10 +111,10 @@ struct LivePickCard: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(CyberColors.green.opacity(0.85), lineWidth: 1)
+                .stroke(CyberColors.skyBlue.opacity(0.85), lineWidth: 1)
         )
-        .shadow(color: CyberColors.green.opacity(0.4), radius: 4, x: 0, y: 0)
-        .shadow(color: CyberColors.green.opacity(0.15), radius: 10, x: 0, y: 2)
+        .shadow(color: CyberColors.skyBlue.opacity(0.4), radius: 6, x: 0, y: 0)
+        .shadow(color: CyberColors.skyBlue.opacity(0.15), radius: 10, x: 0, y: 2)
     }
 
     private func statBlock(label: String, value: String, color: Color) -> some View {
@@ -131,7 +143,8 @@ struct LivePickCard: View {
             confidence: 0.68,
             roiScore: 0.45,
             stakeUnits: 1.5,
-            reasoning: []
+            reasoning: [],
+            kickoff: Date()
         ),
         PickResponse(
             rank: 2,
@@ -144,7 +157,8 @@ struct LivePickCard: View {
             confidence: 0.62,
             roiScore: 0.3,
             stakeUnits: 1.2,
-            reasoning: []
+            reasoning: [],
+            kickoff: nil
         ),
     ])
 }

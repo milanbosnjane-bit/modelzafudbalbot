@@ -44,6 +44,7 @@ class PickResponse(BaseModel):
     roi_score: float
     stake_units: float
     reasoning: list[str]
+    kickoff: datetime | None = None
 
 
 class BacktestRequest(BaseModel):
@@ -129,6 +130,7 @@ async def get_today_picks(db: AsyncSession = Depends(get_db)):
                 roi_score=pick.roi_score,
                 stake_units=pick.stake_units,
                 reasoning=pick.reasoning or [],
+                kickoff=fixture.fixture_date if fixture else None,
             )
         )
     return responses
