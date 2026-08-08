@@ -19,6 +19,7 @@ BLOCKED_MARKET_IDS = frozenset({
     "ht_ft",
     "half_time_full_time",
     "final_score",
+    "double_chance",
 })
 
 DISABLED_MARKET_KEYWORDS = (
@@ -28,6 +29,7 @@ DISABLED_MARKET_KEYWORDS = (
     "half time/full time",
     "ht/ft",
     "ht ft",
+    "double chance",
 )
 
 
@@ -41,7 +43,14 @@ def is_disabled_market(market: str) -> bool:
         return True
     if any(
         token in norm
-        for token in ("exact_score", "correct_score", "ht_ft", "htft", "half_time_full_time")
+        for token in (
+            "exact_score",
+            "correct_score",
+            "ht_ft",
+            "htft",
+            "half_time_full_time",
+            "double_chance",
+        )
     ):
         return True
     name = (market or "").lower().replace("_", " ")

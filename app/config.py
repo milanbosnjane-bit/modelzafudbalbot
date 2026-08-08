@@ -94,10 +94,11 @@ class Settings(BaseSettings):
     model_dir: Path = Path("./data/models")
     feature_dir: Path = Path("./data/features")
 
+    # double_chance is intentionally absent: it is never pickable and only added
+    # ingest volume plus FAIR_PROB_INVALID noise.
     supported_markets: list[str] = Field(
         default=[
             "match_winner",
-            "double_chance",
             "over_under",
             "btts",
             "asian_handicap",

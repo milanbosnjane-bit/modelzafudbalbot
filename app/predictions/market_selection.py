@@ -12,9 +12,6 @@ ALLOWED_AH_LINES = frozenset({-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5})
 
 MATCH_WINNER_SELECTIONS = frozenset({"home", "away", "draw", "1", "2", "x"})
 BTTS_SELECTIONS = frozenset({"yes", "no"})
-DOUBLE_CHANCE_SELECTIONS = frozenset({
-    "home/draw", "draw/away", "home/away", "1x", "x2", "12",
-})
 
 
 def parse_ou_line(selection: str, sel_norm: str | None = None) -> float | None:
@@ -100,7 +97,6 @@ def is_eligible_selection(
         return False
 
     sel = normalize_selection(selection)
-    compact = sel.replace(" ", "")
 
     if market == "match_winner":
         return sel in MATCH_WINNER_SELECTIONS
@@ -109,9 +105,6 @@ def is_eligible_selection(
         if "/" in sel:
             return False
         return sel in BTTS_SELECTIONS
-
-    if market == "double_chance":
-        return compact in DOUBLE_CHANCE_SELECTIONS
 
     if market == "over_under":
         if "/" in sel or "more" in sel or "less" in sel:

@@ -46,6 +46,14 @@ class TestProbabilityLayer:
         assert is_disabled_market("ht_ft") is True
         assert is_disabled_market("match_winner") is False
 
+    def test_double_chance_disabled(self):
+        assert is_disabled_market("double_chance") is True
+        assert is_disabled_market("Double Chance") is True
+
+        from app.predictions.market_selection import is_eligible_selection
+
+        assert is_eligible_selection("double_chance", "Home/Draw") is False
+
     def test_supported_market_filter(self):
         from app.predictions.probability_layer import is_supported_market
 
