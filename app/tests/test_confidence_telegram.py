@@ -35,6 +35,9 @@ def _pick(**kwargs) -> SelectedPick:
 
 
 class TestCalibratedTelegramFormat:
+    # The flag is pinned on every test: format_pick renders two different layouts
+    # depending on it, so reading it from the ambient .env makes these fail.
+    @patch("app.telegram.bot.settings.use_calibrated_confidence", False)
     def test_legacy_conf_line_when_flag_off(self):
         text = TelegramNotifier().format_pick(_pick())
         assert "🔒 CONF: 95%" in text

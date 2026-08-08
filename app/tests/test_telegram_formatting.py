@@ -1,6 +1,7 @@
 """Tests for Telegram betting tip formatting."""
 
 from datetime import datetime
+from unittest.mock import patch
 
 import pytest
 
@@ -99,6 +100,7 @@ class TestFormatTip:
 
 
 class TestTelegramPickMessage:
+    @patch("app.telegram.bot.settings.use_calibrated_confidence", False)
     def test_format_pick_layout(self):
         pick = SelectedPick(
             fixture_id=1,
