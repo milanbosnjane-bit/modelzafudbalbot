@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, fields
 from datetime import datetime, timedelta
 
 import structlog
@@ -68,6 +68,14 @@ def _daily_pick_to_selected(
     fixture: Fixture | None,
     status: str,
 ) -> PickRow:
+    # Calibration columns are absent in older deployed schemas; pass them only when present.
+    pick_fields = {f.name for f in fields(SelectedPick)}
+    optional = {
+        name: getattr(pick, name, None)
+        for name in ("calibrated_confidence", "calibrated_ev")
+        if name in pick_fields
+    }
+
     sp = SelectedPick(
         fixture_id=pick.fixture_id,
         match_label=f"{home} vs {away}",
@@ -90,8 +98,7 @@ def _daily_pick_to_selected(
         fixture_date=fixture.fixture_date if fixture else None,
         status=status,
         pick_id=pick.id,
-        calibrated_confidence=pick.calibrated_confidence,
-        calibrated_ev=pick.calibrated_ev,
+        **optional,
     )
     return PickRow(status=status, pick=sp)
 
