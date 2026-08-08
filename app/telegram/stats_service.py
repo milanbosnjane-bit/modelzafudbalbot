@@ -96,6 +96,27 @@ def _daily_pick_to_selected(
     return PickRow(status=status, pick=sp)
 
 
+def _pending_outcome_filter():
+    return or_(
+        DailyPick.outcome.is_(None),
+        DailyPick.outcome == "",
+        func.lower(DailyPick.outcome) == "pending",
+    )
+
+
+async def get_telegram_live_picks_rows(
+    *, max_display: int | None = None
+) -> list[PickRow]:
+    """
+    Isti pipeline kao Telegram dugme LIVE PICKS:
+    dedupe → pending/live filter → sort po EV → rank 1..N.
+    """
+    raw = await get_picks_from_db()
+    rows, stats = prepare_live_picks(raw, max_display=max_display)
+    log.info("telegram_live_picks_rows", render=len(rows), **stats)
+    return rows
+
+
 async def get_picks_from_db() -> list[PickRow]:
     """Otvoreni tipovi: outcome pending, meč još nije FT (uključuje LIVE u toku)."""
     cutoff = datetime.utcnow() - timedelta(days=7)
@@ -104,11 +125,7 @@ async def get_picks_from_db() -> list[PickRow]:
             select(DailyPick)
             .where(
                 DailyPick.pick_date >= cutoff,
-                or_(
-                    DailyPick.outcome.is_(None),
-                    DailyPick.outcome == "",
-                    func.lower(DailyPick.outcome) == "pending",
-                ),
+                _pending_outcome_filter(),
             )
             .order_by(DailyPick.pick_date.desc(), DailyPick.rank)
         )
@@ -161,8 +178,8 @@ async def get_picks_from_db() -> list[PickRow]:
 async def live_picks() -> str:
     """Svi otvoreni tipovi sortirani po EV (#1 = najjači)."""
     notifier = TelegramNotifier()
-    raw = await get_picks_from_db()
-    active, stats = prepare_live_picks(raw, max_display=None)
+    active = await get_telegram_live_picks_rows(max_display=None)
+    stats = {"total_render": len(active)}
 
     if not active:
         return (

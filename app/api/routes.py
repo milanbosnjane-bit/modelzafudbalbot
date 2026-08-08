@@ -101,12 +101,10 @@ async def trigger_predictions(date: str | None = None):
 
 @router.get("/picks/today", response_model=list[PickResponse])
 async def get_today_picks():
-    """Aktivni tipovi — deduplikovano kao Telegram LIVE PICKS (top 6 po EV)."""
-    from app.telegram.pick_output import prepare_live_picks
-    from app.telegram.stats_service import get_picks_from_db
+    """Isti tipovi kao Telegram LIVE PICKS (shared pipeline, bez limita)."""
+    from app.telegram.stats_service import get_telegram_live_picks_rows
 
-    raw = await get_picks_from_db()
-    active, _ = prepare_live_picks(raw, max_display=6)
+    rows = await get_telegram_live_picks_rows(max_display=None)
 
     return [
         PickResponse(
@@ -124,7 +122,7 @@ async def get_today_picks():
             reasoning=row.pick.reasoning or [],
             kickoff=row.pick.fixture_date,
         )
-        for row in active
+        for row in rows
     ]
 
 
