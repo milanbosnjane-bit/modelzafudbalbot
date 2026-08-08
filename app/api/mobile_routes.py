@@ -19,6 +19,9 @@ settings = get_settings()
 FIXTURE_FINISHED_STATUSES = frozenset({"FT", "AET", "PEN", "AWD", "WO"})
 FIXTURE_LIVE_STATUSES = frozenset({"1H", "2H", "HT", "ET", "BT", "P", "LIVE", "INT", "SUSP", "BREAK"})
 
+# Same window the Telegram LIVE PICKS list uses (app.telegram.stats_service.get_picks_from_db).
+PICKS_WINDOW_DAYS = 7
+
 
 class TodayPickResponse(BaseModel):
     id: int
@@ -34,6 +37,7 @@ class TodayPickResponse(BaseModel):
     stake_units: float
     reasoning: list[str]
     kickoff: datetime | None = None
+    status: str = "PENDING"
 
 
 class SettledPickResponse(BaseModel):
@@ -117,40 +121,39 @@ def _pending_outcome_filter():
     )
 
 
-def _is_pre_kickoff(
-    fixture_date: datetime | None,
-    fixture_status: str | None,
-    *,
-    now: datetime,
-) -> bool:
-    """Mirrors app.telegram.pick_status.is_fixture_pre_kickoff (kept local: API must not import bot code)."""
-    if fixture_date is not None and fixture_date <= now:
-        return False
-    fs = (fixture_status or "NS").strip().upper()
-    if fs in FIXTURE_FINISHED_STATUSES or fs in FIXTURE_LIVE_STATUSES:
-        return False
-    return True
+def _is_fixture_finished(fixture_status: str | None) -> bool:
+    return (fixture_status or "NS").strip().upper() in FIXTURE_FINISHED_STATUSES
+
+
+def _resolve_status(fixture_status: str | None) -> str:
+    """PENDING or LIVE, same rule as app.telegram.pick_status.resolve_pick_status.
+
+    Kept local because the API must not import bot modules.
+    """
+    if (fixture_status or "NS").strip().upper() in FIXTURE_LIVE_STATUSES:
+        return "LIVE"
+    return "PENDING"
 
 
 @mobile_router.get("/picks/today", response_model=list[TodayPickResponse])
 async def get_today_picks(db: AsyncSession = Depends(get_db)):
     """
-    Današnji tipovi — čita ISKLJUČIVO persistovane redove iz daily_picks za današnji dan.
-    Bez ikakve live kalkulacije (nema Dixon-Coles, nema generate_candidates).
-    Isti izvor podataka koji Telegram koristi; prikazuju se samo mečevi pre kickoff-a.
+    Otvoreni tipovi — isti sadržaj i isti redosled kao Telegram dugme LIVE PICKS.
+
+    Čita ISKLJUČIVO persistovane redove iz daily_picks (bez Dixon-Coles računa).
+    Pipeline: pending u zadnjih 7 dana → meč nije završen (LIVE ostaje) → dedupe
+    → sort po EV → rank 1..N. Rank iz baze se NE koristi: on se broji unutar
+    jednog generisanja, pa bi se uz dva dnevna prolaza ponavljao (1..6, 1..6).
     """
-    now = datetime.utcnow()
-    day_start = datetime.combine(now.date(), datetime.min.time())
-    day_end = day_start + timedelta(days=1)
+    cutoff = datetime.utcnow() - timedelta(days=PICKS_WINDOW_DAYS)
 
     result = await db.execute(
         select(DailyPick)
         .where(
-            DailyPick.pick_date >= day_start,
-            DailyPick.pick_date < day_end,
+            DailyPick.pick_date >= cutoff,
             _pending_outcome_filter(),
         )
-        .order_by(DailyPick.pick_date, DailyPick.rank)
+        .order_by(DailyPick.pick_date.desc(), DailyPick.rank)
     )
     db_picks = [p for p in result.scalars().all() if not is_disabled_market(p.market)]
     if not db_picks:
@@ -177,11 +180,7 @@ async def get_today_picks(db: AsyncSession = Depends(get_db)):
             continue
 
         fixture = fixtures.get(pick.fixture_id)
-        if not _is_pre_kickoff(
-            fixture.fixture_date if fixture else None,
-            fixture.status if fixture else None,
-            now=now,
-        ):
+        if fixture and _is_fixture_finished(fixture.status):
             continue
         seen.add(key)
 
@@ -195,7 +194,7 @@ async def get_today_picks(db: AsyncSession = Depends(get_db)):
         responses.append(
             TodayPickResponse(
                 id=pick.id,
-                rank=pick.rank,
+                rank=0,
                 match=f"{home_name} vs {away_name}",
                 market=pick.market,
                 selection=pick.selection,
@@ -207,8 +206,13 @@ async def get_today_picks(db: AsyncSession = Depends(get_db)):
                 stake_units=pick.stake_units or 0.0,
                 reasoning=pick.reasoning or [],
                 kickoff=fixture.fixture_date if fixture else None,
+                status=_resolve_status(fixture.status if fixture else None),
             )
         )
+
+    responses.sort(key=lambda r: (r.expected_value, r.roi_score), reverse=True)
+    for index, row in enumerate(responses, start=1):
+        row.rank = index
     return responses
 
 

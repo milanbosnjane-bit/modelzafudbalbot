@@ -71,7 +71,12 @@ struct LivePickCard: View {
                         .shadow(color: CyberColors.skyBlue.opacity(0.2), radius: 4)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    if let kickoffText {
+                    if pick.isLive {
+                        Text("🔴 U TOKU MEČA")
+                            .font(.system(size: 12, weight: .black))
+                            .foregroundStyle(CyberColors.red)
+                            .shadow(color: CyberColors.red.opacity(0.6), radius: 6)
+                    } else if let kickoffText {
                         Text(kickoffText)
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(CyberColors.skyBlue.opacity(0.9))
@@ -147,7 +152,8 @@ struct LivePickCard: View {
             roiScore: 0.45,
             stakeUnits: 1.5,
             reasoning: [],
-            kickoff: Date()
+            kickoff: Date(),
+            status: "PENDING"
         ),
         PickResponse(
             id: 2,
@@ -162,7 +168,8 @@ struct LivePickCard: View {
             roiScore: 0.3,
             stakeUnits: 1.2,
             reasoning: [],
-            kickoff: nil
+            kickoff: nil,
+            status: "LIVE"
         ),
     ])
 }

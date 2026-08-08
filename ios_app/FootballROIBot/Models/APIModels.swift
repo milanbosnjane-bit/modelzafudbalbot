@@ -42,9 +42,12 @@ struct PickResponse: Codable, Identifiable {
     let stakeUnits: Double
     let reasoning: [String]
     let kickoff: Date?
+    let status: String?
+
+    var isLive: Bool { status?.uppercased() == "LIVE" }
 
     enum CodingKeys: String, CodingKey {
-        case id, rank, match, market, selection, odds, probability, reasoning, confidence, kickoff
+        case id, rank, match, market, selection, odds, probability, reasoning, confidence, kickoff, status
         case expectedValue = "expected_value"
         case roiScore = "roi_score"
         case stakeUnits = "stake_units"
