@@ -29,7 +29,7 @@ struct BotStatusResponse: Codable {
 }
 
 struct PickResponse: Codable, Identifiable {
-    var id: Int { rank }
+    let id: Int
     let rank: Int
     let match: String
     let market: String

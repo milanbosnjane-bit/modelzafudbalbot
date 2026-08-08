@@ -33,6 +33,7 @@ class HealthResponse(BaseModel):
 
 
 class PickResponse(BaseModel):
+    id: int
     rank: int
     match: str
     market: str
@@ -79,6 +80,7 @@ async def trigger_predictions(date: str | None = None):
         "picks_count": len(picks),
         "picks": [
             PickResponse(
+                id=p.pick_id or p.fixture_id,
                 rank=p.rank,
                 match=p.match_label,
                 market=p.market,
@@ -90,6 +92,7 @@ async def trigger_predictions(date: str | None = None):
                 roi_score=p.roi_score,
                 stake_units=p.stake_units,
                 reasoning=p.reasoning,
+                kickoff=p.fixture_date,
             )
             for p in picks
         ],
@@ -97,43 +100,32 @@ async def trigger_predictions(date: str | None = None):
 
 
 @router.get("/picks/today", response_model=list[PickResponse])
-async def get_today_picks(db: AsyncSession = Depends(get_db)):
-    today = datetime.utcnow().date()
-    result = await db.execute(
-        select(DailyPick).where(
-            DailyPick.pick_date >= datetime.combine(today, datetime.min.time()),
-        ).order_by(DailyPick.rank)
-    )
-    picks = result.scalars().all()
+async def get_today_picks():
+    """Aktivni tipovi — deduplikovano kao Telegram LIVE PICKS (top 6 po EV)."""
+    from app.telegram.pick_output import prepare_live_picks
+    from app.telegram.stats_service import get_picks_from_db
 
-    responses = []
-    for pick in picks:
-        fixture = await db.get(Fixture, pick.fixture_id)
-        home_name = away_name = "Unknown"
-        if fixture:
-            from app.database.models import Team
-            home = await db.get(Team, fixture.home_team_id)
-            away = await db.get(Team, fixture.away_team_id)
-            home_name = home.name if home else "Home"
-            away_name = away.name if away else "Away"
+    raw = await get_picks_from_db()
+    active, _ = prepare_live_picks(raw, max_display=6)
 
-        responses.append(
-            PickResponse(
-                rank=pick.rank,
-                match=f"{home_name} vs {away_name}",
-                market=pick.market,
-                selection=pick.selection,
-                odds=pick.odds,
-                probability=pick.probability,
-                expected_value=pick.expected_value,
-                confidence=pick.confidence,
-                roi_score=pick.roi_score,
-                stake_units=pick.stake_units,
-                reasoning=pick.reasoning or [],
-                kickoff=fixture.fixture_date if fixture else None,
-            )
+    return [
+        PickResponse(
+            id=row.pick.pick_id or row.pick.fixture_id,
+            rank=row.pick.rank,
+            match=row.pick.match_label,
+            market=row.pick.market,
+            selection=row.pick.selection,
+            odds=row.pick.odds,
+            probability=row.pick.probability,
+            expected_value=row.pick.expected_value,
+            confidence=row.pick.confidence,
+            roi_score=row.pick.roi_score,
+            stake_units=row.pick.stake_units,
+            reasoning=row.pick.reasoning or [],
+            kickoff=row.pick.fixture_date,
         )
-    return responses
+        for row in active
+    ]
 
 
 @router.post("/calibrate")

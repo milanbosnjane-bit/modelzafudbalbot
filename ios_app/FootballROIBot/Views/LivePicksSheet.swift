@@ -135,6 +135,7 @@ struct LivePickCard: View {
 #Preview {
     LivePicksSheet(picks: [
         PickResponse(
+            id: 1,
             rank: 1,
             match: "KVC Westerlo vs Union St. Gilloise",
             market: "match_winner",
@@ -149,6 +150,7 @@ struct LivePickCard: View {
             kickoff: Date()
         ),
         PickResponse(
+            id: 2,
             rank: 2,
             match: "Team A vs Team B",
             market: "over_under",
