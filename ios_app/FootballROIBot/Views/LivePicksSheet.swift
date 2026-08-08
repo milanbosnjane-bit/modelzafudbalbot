@@ -21,11 +21,12 @@ struct LivePicksSheet: View {
                     }
                 } else {
                     ScrollView(showsIndicators: false) {
-                        LazyVStack(spacing: 14) {
+                        VStack(spacing: 10) {
                             ForEach(picks) { pick in
                                 LivePickCard(pick: pick)
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .top)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 12)
                     }
@@ -101,6 +102,7 @@ struct LivePickCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(CyberColors.panelFill)
