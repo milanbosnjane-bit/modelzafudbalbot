@@ -13,7 +13,7 @@ on:
 jobs:
   build-ipa:
     name: Build FootballROIBot.ipa
-    runs-on: macos-14
+    runs-on: macos-latest
     defaults:
       run:
         working-directory: ios_app
@@ -34,18 +34,21 @@ jobs:
       - name: Build Release (unsigned)
         run: |
           set -euo pipefail
+          set -x
           xcodebuild \
             -project FootballROIBot.xcodeproj \
             -scheme FootballROIBot \
             -configuration Release \
+            -sdk iphoneos \
             -destination "generic/platform=iOS" \
             -derivedDataPath build/DerivedData \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
+            CODE_SIGN_IDENTITY="-" \
             DEVELOPMENT_TEAM="" \
             PROVISIONING_PROFILE_SPECIFIER="" \
-            build
+            build 2>&1 | tee build.log
+          tail -n 50 build.log
 
       - name: Package IPA
         run: |
