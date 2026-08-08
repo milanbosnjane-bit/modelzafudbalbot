@@ -1,0 +1,37 @@
+{
+  "selected": "risk_adj",
+  "comparison": {
+    "raw": {
+      "mae": 0.8888888888888888,
+      "rmse": 0.9428090415820634,
+      "oos_roi_pct": 0.0,
+      "stability": 0.8518520164607225,
+      "composite_score": 0.4739956017320086,
+      "transform": "raw"
+    },
+    "log": {
+      "mae": 0.6861601174360464,
+      "rmse": 1.1219534223228247,
+      "oos_roi_pct": 0.0,
+      "stability": 0.4751439929155227,
+      "composite_score": 0.3848678397924471,
+      "transform": "log"
+    },
+    "odds_norm": {
+      "mae": 0.8888888888888888,
+      "rmse": 0.9428090415820634,
+      "oos_roi_pct": 0.0,
+      "stability": 0.8518520164607225,
+      "composite_score": 0.4739956017320086,
+      "transform": "odds_norm"
+    },
+    "risk_adj": {
+      "mae": 0.892269331068603,
+      "rmse": 0.9428635825997642,
+      "oos_roi_pct": 0.0,
+      "stability": 0.8568432004381329,
+      "composite_score": 0.47500334362182206,
+      "transform": "risk_adj"
+    }
+  }
+}

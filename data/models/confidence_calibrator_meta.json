@@ -1,0 +1,23 @@
+{
+  "trained_at": "2026-08-04T06:39:29.888335",
+  "train_samples": 92,
+  "feature_names": [
+    "dc_prob",
+    "fair_prob",
+    "edge",
+    "raw_ev",
+    "log_odds",
+    "home_ft_log",
+    "away_ft_log",
+    "min_ft_log",
+    "default_lambda_flag",
+    "home_lambda",
+    "away_lambda",
+    "feature_quality",
+    "hours_to_kickoff",
+    "market_mw",
+    "market_ou",
+    "market_btts"
+  ],
+  "model_type": "logistic_regression"
+}

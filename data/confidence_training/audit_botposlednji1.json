@@ -1,0 +1,276 @@
+{
+  "audit_time_utc": "2026-08-04T06:33:27.488325Z",
+  "legacy_folder": "C:\\Users\\Miki\\Desktop\\botposlednji1",
+  "read_only_files_planned": [
+    "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\football_roi.db",
+    "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\features\\drift_baseline.json",
+    "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\models\\target_transform.json",
+    "C:\\Users\\Miki\\Desktop\\botposlednji1\\.env",
+    "C:\\Users\\Miki\\Desktop\\botposlednji1\\app\\database\\models.py"
+  ],
+  "fingerprints_before": [
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\football_roi.db",
+      "exists": true,
+      "size_bytes": 309370880,
+      "modified_utc": "2026-08-04T05:49:07.457150Z",
+      "sha256": "b97d79e499f9fd3485e73d5a15d98652a0b4575035fe55d2d0fbb8da25795872"
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\features\\drift_baseline.json",
+      "exists": true,
+      "size_bytes": 318646,
+      "modified_utc": "2026-08-04T05:47:55.588825Z",
+      "sha256": "6ff9d178a35a0616a050194165bcf4f5a09ac2bec0069dc5566dea1096b1b4ee"
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\models\\target_transform.json",
+      "exists": true,
+      "size_bytes": 996,
+      "modified_utc": "2026-06-29T08:47:24.253767Z",
+      "sha256": "dd92cbbf6aed7d99399282301268f31e67152dcf579077fbf949f42dda3de9cf"
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\.env",
+      "exists": true,
+      "size_bytes": 1320,
+      "modified_utc": "2026-07-28T09:48:22.519211Z",
+      "sha256": "0cd0722147e961c07c11602f5bed2141a9105d539e599b9a6f3664b1852138ff"
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\app\\database\\models.py",
+      "exists": true,
+      "size_bytes": 19479,
+      "modified_utc": "2026-07-28T09:43:15.524160Z",
+      "sha256": "1b2491065f9dda1db455b2f47880316d62e5e30db74f4a75edb1ad841bc67bab"
+    }
+  ],
+  "legacy_db_audit": {
+    "label": "botposlednji1",
+    "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\football_roi.db",
+    "exists": true,
+    "size_bytes": 309370880,
+    "tables": {
+      "backtest_runs": 1,
+      "daily_picks": 87,
+      "feature_drift_runs": 56,
+      "feature_vectors": 1816,
+      "fixtures": 1830,
+      "injuries": 780,
+      "leagues": 14,
+      "lineups": 0,
+      "match_stats": 160,
+      "model_metrics": 0,
+      "odds_snapshots": 1850858,
+      "predictions": 120,
+      "regime_history": 90,
+      "retrain_events": 56,
+      "standings": 515,
+      "target_selection_metrics": 4,
+      "teams": 518,
+      "weather": 0
+    },
+    "daily_picks_columns": [
+      "id",
+      "pick_date",
+      "fixture_id",
+      "market",
+      "selection",
+      "line",
+      "odds",
+      "opening_odds",
+      "closing_odds",
+      "fair_implied_prob",
+      "probability",
+      "expected_value",
+      "confidence",
+      "roi_score",
+      "stake_units",
+      "stake_method",
+      "reasoning",
+      "rank",
+      "outcome",
+      "profit_units",
+      "realized_return",
+      "clv",
+      "closing_fair_prob",
+      "model_edge",
+      "closing_edge",
+      "edge_capture",
+      "raw_edge_capture",
+      "adjusted_edge_capture",
+      "market_regime",
+      "is_paper",
+      "sent_to_telegram",
+      "created_at"
+    ],
+    "outcomes": {
+      "win": 40,
+      "lose": 39,
+      "void": 4,
+      "pending": 4
+    },
+    "settled_win_lose": 79,
+    "prematch_win_lose": 79,
+    "prematch_wins": 40,
+    "prematch_losses": 39,
+    "field_completeness": {
+      "total": 79,
+      "has_prob": 79,
+      "has_odds": 79,
+      "has_market": 79,
+      "has_sel": 79,
+      "has_pick_ts": 79,
+      "has_kickoff": 79,
+      "has_fair": 79,
+      "has_conf": 79,
+      "has_ev": 79
+    },
+    "period": {
+      "pick_date_min": "2026-06-27 08:47:34.655600",
+      "pick_date_max": "2026-07-31 05:55:40.039311",
+      "fixture_date_min": "2026-06-27 16:00:00.000000",
+      "fixture_date_max": "2026-07-31 17:30:00.000000"
+    },
+    "has_confidence_prediction_logs": false,
+    "sample_keys": [
+      {
+        "fixture_id": 1499958,
+        "market": "match_winner",
+        "selection": "Draw",
+        "pick_date": "2026-06-27 08:47:34.655600"
+      },
+      {
+        "fixture_id": 1554049,
+        "market": "match_winner",
+        "selection": "Away",
+        "pick_date": "2026-06-27 09:10:59.412249"
+      },
+      {
+        "fixture_id": 1553749,
+        "market": "match_winner",
+        "selection": "Draw",
+        "pick_date": "2026-06-27 09:48:55.667009"
+      }
+    ]
+  },
+  "current_db_audit": {
+    "label": "current_bot",
+    "path": "C:\\Users\\Miki\\Desktop\\modelzafudbalbot\\data\\football_roi.db",
+    "exists": true,
+    "size_bytes": 542265344,
+    "tables": {
+      "backtest_runs": 19,
+      "daily_picks": 47,
+      "feature_drift_runs": 70,
+      "feature_vectors": 10002,
+      "fixtures": 34616,
+      "injuries": 818,
+      "leagues": 27,
+      "lineups": 4,
+      "match_stats": 3724,
+      "model_metrics": 0,
+      "odds_snapshots": 3094083,
+      "predictions": 151,
+      "regime_history": 90,
+      "retrain_events": 70,
+      "standings": 716,
+      "target_selection_metrics": 12,
+      "teams": 1188,
+      "weather": 0
+    },
+    "daily_picks_columns": [
+      "id",
+      "pick_date",
+      "fixture_id",
+      "market",
+      "selection",
+      "line",
+      "odds",
+      "opening_odds",
+      "closing_odds",
+      "fair_implied_prob",
+      "probability",
+      "expected_value",
+      "confidence",
+      "roi_score",
+      "stake_units",
+      "stake_method",
+      "reasoning",
+      "rank",
+      "outcome",
+      "profit_units",
+      "realized_return",
+      "clv",
+      "closing_fair_prob",
+      "model_edge",
+      "closing_edge",
+      "edge_capture",
+      "raw_edge_capture",
+      "adjusted_edge_capture",
+      "market_regime",
+      "is_paper",
+      "sent_to_telegram",
+      "created_at",
+      "played_manually",
+      "user_odds",
+      "clv_raw",
+      "closing_fair_edge"
+    ],
+    "outcomes": {
+      "lose": 24,
+      "win": 20,
+      "pending": 3
+    },
+    "settled_win_lose": 44,
+    "prematch_win_lose": 44,
+    "prematch_wins": 20,
+    "prematch_losses": 24,
+    "field_completeness": {
+      "total": 44,
+      "has_prob": 44,
+      "has_odds": 44,
+      "has_market": 44,
+      "has_sel": 44,
+      "has_pick_ts": 44,
+      "has_kickoff": 44,
+      "has_fair": 44,
+      "has_conf": 44,
+      "has_ev": 44
+    },
+    "period": {
+      "pick_date_min": "2026-07-16 06:08:50.661774",
+      "pick_date_max": "2026-07-30 06:00:00.948968",
+      "fixture_date_min": "2026-07-16 15:00:00.000000",
+      "fixture_date_max": "2026-07-30 19:00:00.000000"
+    },
+    "has_confidence_prediction_logs": false,
+    "sample_keys": [
+      {
+        "fixture_id": 1554451,
+        "market": "over_under",
+        "selection": "Under 2.5",
+        "pick_date": "2026-07-16 06:08:50.661774"
+      },
+      {
+        "fixture_id": 1554449,
+        "market": "over_under",
+        "selection": "Under 2.5",
+        "pick_date": "2026-07-16 06:08:50.661774"
+      },
+      {
+        "fixture_id": 1554426,
+        "market": "over_under",
+        "selection": "Under 2.5",
+        "pick_date": "2026-07-16 06:08:50.661774"
+      }
+    ]
+  },
+  "duplicate_check": {
+    "legacy_valid_keys": 79,
+    "current_valid_keys": 44,
+    "overlap_keys": 0,
+    "legacy_only_keys": 79,
+    "current_only_keys": 44
+  }
+}

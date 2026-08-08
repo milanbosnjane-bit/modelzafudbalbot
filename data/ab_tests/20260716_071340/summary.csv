@@ -1,0 +1,2 @@
+profile_id,label,description,total_bets,roi_pct,win_rate,total_profit,total_staked,avg_clv,avg_ev,sharpe_ratio,clv_coverage_pct,delta_roi_vs_baseline
+test_c_no_market_gate,TEST C,"Context gates ON, market confirmation OFF",17,52.1539,0.529412,14.6396,28.07,-0.187299,0.245705,6.6179,0.058824,

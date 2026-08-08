@@ -1,0 +1,45 @@
+{
+  "profile_id": "min_odds_2_00_ev5",
+  "label": "MIN ODDS 2.00 + EV 5%",
+  "description": "Floor kvote 2.00 + globalni min EV 5%",
+  "period": {
+    "start": "2025-01-01T00:00:00",
+    "end": "2025-12-31T23:59:00"
+  },
+  "config": {
+    "decision_hours": 1.0,
+    "exclude_legacy": true,
+    "env": {
+      "CONTEXT_GATES_ENABLED": "true",
+      "FATIGUE_GATE_ENABLED": "true",
+      "MARKET_CONFIRMATION_GATE_ENABLED": "false",
+      "LINEUP_GATE_ENABLED": "true",
+      "DECISION_HOURS_BEFORE_KICKOFF": "1.0"
+    },
+    "patches_applied": [
+      "global_min_odds=2.0,global_min_ev=0.05"
+    ],
+    "poisson_only_mode": true,
+    "context_gates_enabled": true,
+    "market_confirmation_gate_enabled": false,
+    "min_team_xg_threshold": 0.15
+  },
+  "metrics": {
+    "total_bets": 0,
+    "total_staked": 0,
+    "total_profit": 0,
+    "roi_pct": 0,
+    "win_rate": 0,
+    "avg_ev": 0,
+    "avg_clv": 0,
+    "avg_odds": 0.0,
+    "max_drawdown_units": 0.0,
+    "sharpe_ratio": 0.0,
+    "clv_coverage_pct": 0,
+    "wins": 0,
+    "losses": 0,
+    "pushes": 0
+  },
+  "picks": [],
+  "run_at": "2026-07-22T19:03:06.954752"
+}

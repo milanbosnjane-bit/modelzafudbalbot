@@ -1,0 +1,2 @@
+profile_id,label,description,total_bets,roi_pct,win_rate,total_profit,total_staked,avg_clv,avg_ev,sharpe_ratio,clv_coverage_pct,delta_roi_vs_baseline
+baseline,BASELINE,Trenutno stanje: .env + config.py + pick_selector filteri,0,0,0,0,0,0,0,0.0,0,0

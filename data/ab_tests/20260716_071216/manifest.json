@@ -1,0 +1,9 @@
+{
+  "created_at": "2026-07-16T07:12:16.125866",
+  "start": "2026-01-01",
+  "end": "2026-07-16",
+  "profiles": [
+    "baseline"
+  ],
+  "output_dir": "C:\\Users\\Miki\\Desktop\\modelzafudbalbot\\data\\ab_tests\\20260716_071216"
+}

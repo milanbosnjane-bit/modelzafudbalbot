@@ -1,0 +1,13 @@
+{
+  "created_at": "2026-07-22T19:04:51.166055",
+  "start": "2026-06-20",
+  "end": "2026-07-18",
+  "profiles": [
+    "baseline",
+    "min_odds_2_00",
+    "min_odds_2_20",
+    "min_odds_2_00_ev5",
+    "min_odds_2_20_ev5"
+  ],
+  "output_dir": "data\\ab_tests\\odds_floor_2026"
+}

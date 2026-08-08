@@ -1,0 +1,60 @@
+{
+  "built_at_utc": "2026-08-04T06:34:47.100655Z",
+  "legacy_rows": 79,
+  "current_rows": 44,
+  "merged_rows": 123,
+  "wins": 60,
+  "losses": 63,
+  "sources": {
+    "botposlednji1": 79,
+    "current_bot": 44
+  },
+  "period": {
+    "prediction_min": "2026-06-27 08:47:34.655600",
+    "prediction_max": "2026-07-31 05:55:40.039311",
+    "kickoff_min": "2026-06-27 16:00:00",
+    "kickoff_max": "2026-07-31 17:30:00"
+  },
+  "legacy_fingerprints_unchanged": true,
+  "fingerprints_before": [
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\football_roi.db",
+      "sha256": "b97d79e499f9fd3485e73d5a15d98652a0b4575035fe55d2d0fbb8da25795872",
+      "modified_utc": "2026-08-04T05:49:07.457150Z",
+      "size_bytes": 309370880
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\features\\drift_baseline.json",
+      "sha256": "6ff9d178a35a0616a050194165bcf4f5a09ac2bec0069dc5566dea1096b1b4ee",
+      "modified_utc": "2026-08-04T05:47:55.588825Z",
+      "size_bytes": 318646
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\models\\target_transform.json",
+      "sha256": "dd92cbbf6aed7d99399282301268f31e67152dcf579077fbf949f42dda3de9cf",
+      "modified_utc": "2026-06-29T08:47:24.253767Z",
+      "size_bytes": 996
+    }
+  ],
+  "fingerprints_after": [
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\football_roi.db",
+      "sha256": "b97d79e499f9fd3485e73d5a15d98652a0b4575035fe55d2d0fbb8da25795872",
+      "modified_utc": "2026-08-04T05:49:07.457150Z",
+      "size_bytes": 309370880
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\features\\drift_baseline.json",
+      "sha256": "6ff9d178a35a0616a050194165bcf4f5a09ac2bec0069dc5566dea1096b1b4ee",
+      "modified_utc": "2026-08-04T05:47:55.588825Z",
+      "size_bytes": 318646
+    },
+    {
+      "path": "C:\\Users\\Miki\\Desktop\\botposlednji1\\data\\models\\target_transform.json",
+      "sha256": "dd92cbbf6aed7d99399282301268f31e67152dcf579077fbf949f42dda3de9cf",
+      "modified_utc": "2026-06-29T08:47:24.253767Z",
+      "size_bytes": 996
+    }
+  ],
+  "csv_path": "C:\\Users\\Miki\\Desktop\\modelzafudbalbot\\data\\confidence_training\\history_merged.csv"
+}

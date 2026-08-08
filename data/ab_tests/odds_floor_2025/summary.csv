@@ -1,0 +1,6 @@
+profile_id,label,description,total_bets,roi_pct,win_rate,total_profit,total_staked,avg_clv,avg_ev,sharpe_ratio,clv_coverage_pct,delta_roi_vs_baseline
+baseline,BASELINE,Trenutno stanje: .env + config.py + pick_selector filteri,0,0,0,0,0,0,0,0.0,0,0
+min_odds_2_00,MIN ODDS 2.00,Globalni floor kvote 2.00 (sve selekcije),0,0,0,0,0,0,0,0.0,0,0
+min_odds_2_20,MIN ODDS 2.20,Globalni floor kvote 2.20 (sve selekcije),0,0,0,0,0,0,0,0.0,0,0
+min_odds_2_00_ev5,MIN ODDS 2.00 + EV 5%,Floor kvote 2.00 + globalni min EV 5%,0,0,0,0,0,0,0,0.0,0,0
+min_odds_2_20_ev5,MIN ODDS 2.20 + EV 5%,Floor kvote 2.20 + globalni min EV 5%,0,0,0,0,0,0,0,0.0,0,0
