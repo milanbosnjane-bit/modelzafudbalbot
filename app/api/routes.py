@@ -99,33 +99,6 @@ async def trigger_predictions(date: str | None = None):
     }
 
 
-@router.get("/picks/today", response_model=list[PickResponse])
-async def get_today_picks():
-    """Isti tipovi kao Telegram LIVE PICKS (shared pipeline, bez limita)."""
-    from app.telegram.stats_service import get_telegram_live_picks_rows
-
-    rows = await get_telegram_live_picks_rows(max_display=None)
-
-    return [
-        PickResponse(
-            id=row.pick.pick_id or row.pick.fixture_id,
-            rank=row.pick.rank,
-            match=row.pick.match_label,
-            market=row.pick.market,
-            selection=row.pick.selection,
-            odds=row.pick.odds,
-            probability=row.pick.probability,
-            expected_value=row.pick.expected_value,
-            confidence=row.pick.confidence,
-            roi_score=row.pick.roi_score,
-            stake_units=row.pick.stake_units,
-            reasoning=row.pick.reasoning or [],
-            kickoff=row.pick.fixture_date,
-        )
-        for row in rows
-    ]
-
-
 @router.post("/calibrate")
 async def trigger_calibration(
     lookback_days: int | None = Query(None, ge=30, le=1095),

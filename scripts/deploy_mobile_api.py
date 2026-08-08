@@ -46,6 +46,10 @@ def main() -> int:
         (ROOT / "app" / "api" / "routes.py", f"{REMOTE_API}/routes.py"),
         (ROOT / "scripts" / "server" / "fastapi.sh", f"{REMOTE}/scripts/server/fastapi.sh"),
     ]
+    if os.environ.get("RESTORE_TELEGRAM_BOT") == "1":
+        files.append(
+            (ROOT / "app" / "telegram" / "stats_service.py", f"{REMOTE}/app/telegram/stats_service.py"),
+        )
     for local, _ in files:
         if not local.is_file():
             safe_print(f"[GRESKA] Nedostaje fajl: {local}")
@@ -83,6 +87,13 @@ fi
 sleep 2
 curl -sf http://127.0.0.1:{API_PORT}/api/v1/health || echo "health check failed"
 curl -sf http://127.0.0.1:{API_PORT}/api/v1/status | head -c 300 || echo "status check failed"
+"""
+    if os.environ.get("RESTORE_TELEGRAM_BOT") == "1":
+        restart_cmd += """
+if systemctl --user is-active football-dc-telegram.service >/dev/null 2>&1; then
+  systemctl --user restart football-dc-telegram.service
+  echo "Restored + restarted football-dc-telegram.service"
+fi
 """
     code, out = run(client, restart_cmd)
     safe_print(out)
