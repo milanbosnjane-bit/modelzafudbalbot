@@ -73,7 +73,7 @@ struct LivePickCard: View {
 
                     if let kickoffText {
                         Text(kickoffText)
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(CyberColors.skyBlue.opacity(0.9))
                     }
                 }
