@@ -62,31 +62,30 @@ struct GlassPanel: ViewModifier {
                             .fill(.ultraThinMaterial.opacity(0.45))
                     )
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .stroke(borderStroke, lineWidth: 1.5)
-            )
+            .overlay {
+                if dualNeonBorder {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(
+                            LinearGradient(
+                                colors: [
+                                    CyberColors.cyan.opacity(0.95),
+                                    CyberColors.violet.opacity(0.85),
+                                    CyberColors.purple.opacity(0.9),
+                                    CyberColors.cyan.opacity(0.75),
+                                ],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            ),
+                            lineWidth: 1.5
+                        )
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(borderColor.opacity(0.9), lineWidth: 1.5)
+                }
+            }
             .shadow(color: CyberColors.cyan.opacity(dualNeonBorder ? 0.35 : 0), radius: glowRadius * 0.6, x: 0, y: 0)
             .shadow(color: borderColor.opacity(0.5), radius: glowRadius, x: 0, y: 0)
             .shadow(color: CyberColors.purple.opacity(dualNeonBorder ? 0.3 : 0), radius: glowRadius * 0.8, x: 0, y: 2)
-    }
-
-    @ViewBuilder
-    private var borderStroke: some ShapeStyle {
-        if dualNeonBorder {
-            LinearGradient(
-                colors: [
-                    CyberColors.cyan.opacity(0.95),
-                    CyberColors.violet.opacity(0.85),
-                    CyberColors.purple.opacity(0.9),
-                    CyberColors.cyan.opacity(0.75),
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        } else {
-            borderColor.opacity(0.9)
-        }
     }
 }
 
