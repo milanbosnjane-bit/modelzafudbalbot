@@ -14,6 +14,8 @@ jobs:
   build-ipa:
     name: Build FootballROIBot.ipa
     runs-on: macos-latest
+    permissions:
+      contents: write
     defaults:
       run:
         working-directory: ios_app
