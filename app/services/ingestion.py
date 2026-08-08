@@ -1,5 +1,6 @@
 """Data ingestion service - collects and stores all football data."""
 
+import re
 from datetime import datetime, timedelta
 
 import structlog
@@ -28,6 +29,32 @@ from app.utils.odds import market_overround, proportional_devig
 
 logger = structlog.get_logger()
 settings = get_settings()
+
+# Exact API-Football bet names (ids 1, 5, 8) for the three full-time markets the
+# models predict. Names are matched in full: every variant carries a suffix
+# ("Goals Over/Under First Half", "Both Teams Score - First Half") or a different
+# subject ("Corners Over Under", "Home Team Total Goals(1st Half)"), so exact
+# matching keeps them out while a substring test pulled them in.
+FULL_TIME_MARKET_NAMES = {
+    "match winner": "match_winner",
+    "goals over/under": "over_under",
+    "both teams score": "btts",
+    "both teams to score": "btts",
+}
+
+MATCH_WINNER_VALUES = {
+    "home": "Home",
+    "draw": "Draw",
+    "away": "Away",
+    "1": "Home",
+    "x": "Draw",
+    "2": "Away",
+}
+
+BTTS_VALUES = {"yes": "Yes", "no": "No"}
+
+ALLOWED_OU_LINES = frozenset({1.5, 2.5, 3.5})
+OU_SELECTION_RE = re.compile(r"^(over|under)\s+(\d+(?:\.\d+)?)$")
 
 
 class DataIngestionService:
@@ -395,7 +422,6 @@ class DataIngestionService:
 
         captured_at = utc_now()
         supported = set(settings.supported_markets)
-        allowed_ou_lines = {1.5, 2.5, 3.5}
 
         # One query for all prior opening odds on this fixture
         existing_result = await self.session.execute(
@@ -411,6 +437,10 @@ class DataIngestionService:
 
         market_groups: dict[tuple, list[tuple[str, float]]] = {}
         parsed_rows: list[dict] = []
+        # One row per (bookmaker, market, selection, line): a bookmaker occasionally
+        # repeats an outcome, and a duplicate would add a phantom leg to the de-vig group.
+        seen: set[tuple] = set()
+        skipped_markets = 0
 
         for entry in odds_data:
             for bm in entry.get("bookmakers", []):
@@ -418,24 +448,23 @@ class DataIngestionService:
                 for bet in bm.get("bets", []):
                     market = self._normalize_market(bet.get("name", ""))
                     if market is None or market not in supported:
+                        skipped_markets += 1
                         continue
-                    line = None
                     for value in bet.get("values", []):
-                        selection = str(value.get("value", "")).strip()
                         current_odds = safe_float(value.get("odd", 0))
                         if current_odds <= 1.0:
                             continue
-                        sel_norm = normalize_selection(selection)
-                        if market == "over_under":
-                            line = self._parse_ou_line(selection, sel_norm)
-                            if line is None or line not in allowed_ou_lines:
-                                continue
-                        elif "over" in sel_norm or "under" in sel_norm:
-                            line = self._parse_ou_line(selection, sel_norm)
+                        canonical = self._canonical_selection(
+                            market, str(value.get("value", "")).strip()
+                        )
+                        if canonical is None:
+                            continue
+                        selection, line = canonical
 
-                        if market == "asian_handicap" and line is not None:
-                            if abs(line) > 2.5:
-                                continue
+                        dedupe_key = (bm_name, market, selection, line)
+                        if dedupe_key in seen:
+                            continue
+                        seen.add(dedupe_key)
 
                         key = (bm_name, market, line)
                         market_groups.setdefault(key, []).append((selection, current_odds))
@@ -496,7 +525,13 @@ class DataIngestionService:
 
         if count:
             await self.session.commit()
-        logger.info("ingested_odds", fixture_id=fixture_id, snapshots=count)
+        logger.info(
+            "ingested_odds",
+            fixture_id=fixture_id,
+            snapshots=count,
+            groups=len(market_groups),
+            ignored_bets=skipped_markets,
+        )
         return count
 
     def _parse_ou_line(self, selection: str, sel_norm: str) -> float | None:
@@ -508,25 +543,44 @@ class DataIngestionService:
         return None
 
     def _normalize_market(self, market_name: str) -> str | None:
-        name = market_name.lower()
-        if any(kw in name for kw in (
-            "correct score", "exact score", "final score",
-            "half time/full time", "ht/ft", "ht ft", "ht-ft",
-        )):
-            return None
-        norm = name.replace("-", "_").replace(" ", "_")
-        if norm in ("exact_score", "correct_score", "ht_ft", "half_time_full_time"):
-            return None
-        if "both teams" in name or "btts" in name:
-            return "btts"
-        if "over" in name or "under" in name or "goals" in name:
-            return "over_under"
-        if "double chance" in name:
-            return "double_chance"
-        if "handicap" in name or "spread" in name:
-            return "asian_handicap"
-        if "match winner" in name or "1x2" in name or "home/away" in name:
-            return "match_winner"
+        """Map a bookmaker bet name to an internal market, or None to ignore it.
+
+        Exact-name allowlist by design. Substring matching used to pull first-half
+        goals, team totals, corners, cards and combo bets into these three keys,
+        so several different bets landed on one
+        (bookmaker, market, selection, line) row and destroyed the de-vig groups.
+        An unknown name must be dropped rather than guessed.
+        """
+        return FULL_TIME_MARKET_NAMES.get(" ".join(market_name.lower().split()))
+
+    def _canonical_selection(
+        self, market: str, selection: str
+    ) -> tuple[str, float | None] | None:
+        """Canonical (selection, line) for a full-time market, or None if unusable."""
+        sel_norm = normalize_selection(selection)
+
+        if market == "match_winner":
+            canonical = MATCH_WINNER_VALUES.get(sel_norm)
+            return (canonical, None) if canonical else None
+
+        if market == "btts":
+            canonical = BTTS_VALUES.get(sel_norm)
+            return (canonical, None) if canonical else None
+
+        if market == "over_under":
+            # Strictly "over <line>" / "under <line>". Anything with extra tokens is a
+            # combo such as "Away/Over 2.5" and must not be read as a plain total.
+            match = OU_SELECTION_RE.match(sel_norm)
+            if not match:
+                return None
+            try:
+                line = float(match.group(2))
+            except ValueError:
+                return None
+            if line not in ALLOWED_OU_LINES:
+                return None
+            return f"{match.group(1).capitalize()} {line:g}", line
+
         return None
 
     async def ingest_match_stats(self, fixture_id: int) -> int:

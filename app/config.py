@@ -94,14 +94,14 @@ class Settings(BaseSettings):
     model_dir: Path = Path("./data/models")
     feature_dir: Path = Path("./data/features")
 
-    # double_chance is intentionally absent: it is never pickable and only added
-    # ingest volume plus FAIR_PROB_INVALID noise.
+    # The three full-time markets the models predict. double_chance and
+    # asian_handicap are absent because PICK_MARKETS can never select them, so
+    # ingesting them only cost snapshot rows and de-vig noise.
     supported_markets: list[str] = Field(
         default=[
             "match_winner",
             "over_under",
             "btts",
-            "asian_handicap",
         ]
     )
 

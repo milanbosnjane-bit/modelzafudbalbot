@@ -20,6 +20,7 @@ REMOTE = os.environ.get("REMOTE_PATH", "/home/miki/football-dc-bot")
 
 FILES = (
     "app/config.py",
+    "app/services/ingestion.py",
     "app/predictions/probability_layer.py",
     "app/predictions/market_selection.py",
 )
@@ -30,14 +31,36 @@ VERIFY = r"""
 from app.config import get_settings
 from app.predictions.probability_layer import is_disabled_market
 from app.predictions.market_selection import is_eligible_selection
+from app.services.ingestion import DataIngestionService
 
 s = get_settings()
+svc = DataIngestionService.__new__(DataIngestionService)
+
 print("supported_markets:", s.supported_markets)
-print("double_chance u supported:", "double_chance" in s.supported_markets)
-print("is_disabled_market('double_chance'):", is_disabled_market("double_chance"))
-print("is_disabled_market('Double Chance'):", is_disabled_market("Double Chance"))
-print("is_eligible_selection('double_chance','Home/Draw'):", is_eligible_selection("double_chance", "Home/Draw"))
-print("--- kontrola da ostali marketi rade ---")
+
+print("\n--- glavni marketi MORAJU proci ---")
+for name, expect in (("Match Winner", "match_winner"),
+                     ("Goals Over/Under", "over_under"),
+                     ("Both Teams Score", "btts")):
+    got = svc._normalize_market(name)
+    print(f"  {name!r:22s} -> {got}   {'OK' if got == expect else 'GRESKA'}")
+
+print("\n--- ono sto se ranije provlacilo MORA biti None ---")
+for name in ("Goals Over/Under First Half", "Home Team Total Goals(1st Half)",
+             "Result/Total Goals", "Corners Over Under", "Cards Over/Under",
+             "Home/Away", "Corners 1x2", "1x2 - 15 minutes", "Fouls. 1x2",
+             "Both Teams Score - First Half", "Total Goals/Both Teams To Score",
+             "Asian Handicap", "Double Chance", "Exact Score"):
+    got = svc._normalize_market(name)
+    print(f"  {name!r:36s} -> {got}   {'OK' if got is None else 'GRESKA'}")
+
+print("\n--- kanonske selekcije ---")
+for m, raw in (("match_winner", "Home"), ("match_winner", "1"), ("btts", "Yes"),
+               ("over_under", "Over 2.5"), ("over_under", "Away/Over 2.5"),
+               ("over_under", "Over 0.5")):
+    print(f"  {m}/{raw!r:16s} -> {svc._canonical_selection(m, raw)}")
+
+print("\n--- pick filteri jos rade ---")
 for m, sel, line in (("match_winner", "Home", None), ("btts", "Yes", None), ("over_under", "Over 2.5", 2.5)):
     print(f"  {m}/{sel}: disabled={is_disabled_market(m)} eligible={is_eligible_selection(m, sel, line, live=True)}")
 """
