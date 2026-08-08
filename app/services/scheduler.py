@@ -91,12 +91,12 @@ async def job_paper_settle():
 def create_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=UTC)
 
-    # UTC cron (srpsko UTC+2): ingest 07:00, pickovi 08:00
+    # UTC cron (srpsko UTC+2): ingest 07:00 i 14:00, pickovi 08:00 i 15:00
     scheduler.add_job(
         job_ingest_fixtures,
-        CronTrigger(hour=5, minute=0, timezone=UTC),
+        CronTrigger(hour="5,12", minute=0, timezone=UTC),
         id="ingest_fixtures",
-        name="Daily fixture ingestion (07:00 srpsko)",
+        name="Fixture ingestion (07:00 i 14:00 srpsko)",
     )
     scheduler.add_job(
         job_update_odds,
@@ -112,9 +112,9 @@ def create_scheduler() -> AsyncIOScheduler:
     )
     scheduler.add_job(
         job_daily_predictions,
-        CronTrigger(hour=6, minute=0, timezone=UTC),
+        CronTrigger(hour="6,13", minute=0, timezone=UTC),
         id="daily_predictions",
-        name="Generate daily picks + Telegram (08:00 srpsko)",
+        name="Generate picks + Telegram (08:00 i 15:00 srpsko)",
     )
     scheduler.add_job(
         job_paper_settle,
