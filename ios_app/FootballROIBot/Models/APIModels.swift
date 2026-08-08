@@ -44,7 +44,7 @@ struct PickResponse: Codable, Identifiable {
     let kickoff: Date?
 
     enum CodingKeys: String, CodingKey {
-        case rank, match, market, selection, odds, probability, reasoning, confidence, kickoff
+        case id, rank, match, market, selection, odds, probability, reasoning, confidence, kickoff
         case expectedValue = "expected_value"
         case roiScore = "roi_score"
         case stakeUnits = "stake_units"
