@@ -15,6 +15,8 @@
 		A10000010000000000000006 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000006 /* Assets.xcassets */; };
 		A10000010000000000000007 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000008 /* SettingsView.swift */; };
 		A10000010000000000000008 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000009 /* AppConfig.swift */; };
+		A10000010000000000000009 /* PickFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000010 /* PickFormatting.swift */; };
+		A10000010000000000000010 /* LivePicksSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000010000000000000011 /* LivePicksSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -27,6 +29,8 @@
 		A20000010000000000000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A20000010000000000000008 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A20000010000000000000009 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		A20000010000000000000010 /* PickFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickFormatting.swift; sourceTree = "<group>"; };
+		A20000010000000000000011 /* LivePicksSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LivePicksSheet.swift; sourceTree = "<group>"; };
 		A30000010000000000000001 /* FootballROIBot.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FootballROIBot.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -92,6 +96,7 @@
 			children = (
 				A20000010000000000000009 /* AppConfig.swift */,
 				A20000010000000000000004 /* AppServices.swift */,
+				A20000010000000000000010 /* PickFormatting.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -101,6 +106,7 @@
 			children = (
 				A20000010000000000000005 /* DashboardView.swift */,
 				A20000010000000000000008 /* SettingsView.swift */,
+				A20000010000000000000011 /* LivePicksSheet.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -181,6 +187,8 @@
 				A10000010000000000000005 /* DashboardView.swift in Sources */,
 				A10000010000000000000007 /* SettingsView.swift in Sources */,
 				A10000010000000000000008 /* AppConfig.swift in Sources */,
+				A10000010000000000000009 /* PickFormatting.swift in Sources */,
+				A10000010000000000000010 /* LivePicksSheet.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

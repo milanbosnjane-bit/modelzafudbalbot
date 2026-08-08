@@ -311,52 +311,6 @@ struct ROIStatsSheet: View {
     }
 }
 
-struct LivePicksSheet: View {
-    let picks: [PickResponse]
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ZStack {
-                CyberGridBackground()
-                if picks.isEmpty {
-                    Text("Nema aktivnih pickova danas")
-                        .foregroundStyle(CyberColors.textSecondary)
-                } else {
-                    List(picks) { pick in
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text("#\(pick.rank) \(pick.match)")
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                            Text("\(pick.market) · \(pick.selection)")
-                                .font(.caption)
-                                .foregroundStyle(CyberColors.textSecondary)
-                            HStack {
-                                Text(String(format: "@%.2f", pick.odds))
-                                Text(String(format: "EV %+.0f%%", pick.expectedValue * 100))
-                                    .foregroundStyle(CyberColors.green)
-                                Text(String(format: "CONF %.0f%%", pick.confidence * 100))
-                                    .foregroundStyle(CyberColors.purple)
-                            }
-                            .font(.caption.monospaced())
-                        }
-                        .listRowBackground(CyberColors.panelFill)
-                    }
-                    .scrollContentBackground(.hidden)
-                }
-            }
-            .navigationTitle("LIVE PICKS")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Zatvori") { dismiss() }.foregroundStyle(CyberColors.cyan)
-                }
-            }
-        }
-        .preferredColorScheme(.dark)
-    }
-}
-
 struct RecentResultsSheet: View {
     let picks: [SettledPickResponse]
     @Environment(\.dismiss) private var dismiss
