@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     fatigue_support_under_threshold: float = 0.30
     motivation_high_threshold: float = 0.62
     market_adverse_move_pct: float = 0.025
+    # Pre-kickoff Telegram warning when decision odds jump this much (~T-30).
+    pre_kickoff_adverse_jump_pct: float = 0.03
     market_confirm_shortening_pct: float = 0.01
     lineup_injury_block_threshold: float = 0.50
     lineup_rotation_block_threshold: float = 0.65

@@ -76,6 +76,10 @@ class TelegramNotifier:
 
         return await self.send_message(STARTUP_MESSAGE, with_menu=True)
 
+    async def send_odds_warning(self, text: str) -> bool:
+        """Plain-text pre-kickoff adverse odds alert (no Markdown / menu)."""
+        return await self.send_message(text)
+
     def format_header(self, date: str | None = None) -> str:
         day = date or datetime.utcnow().strftime("%Y-%m-%d")
         return f"⚽ FOOTBALL PICKS | {day} | Dixon-Coles\n\n{PICK_SEPARATOR}"

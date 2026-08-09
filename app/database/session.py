@@ -72,6 +72,10 @@ def _sqlite_migrate_daily_picks(conn) -> None:
         conn.execute(text("ALTER TABLE daily_picks ADD COLUMN calibrated_confidence FLOAT"))
     if "calibrated_ev" not in existing:
         conn.execute(text("ALTER TABLE daily_picks ADD COLUMN calibrated_ev FLOAT"))
+    if "warning_sent" not in existing:
+        conn.execute(
+            text("ALTER TABLE daily_picks ADD COLUMN warning_sent BOOLEAN DEFAULT 0")
+        )
 
 
 def _sqlite_migrate_confidence(conn) -> None:

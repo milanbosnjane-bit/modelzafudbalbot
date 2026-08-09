@@ -88,6 +88,17 @@ async def job_paper_settle():
     logger.info("job_paper_settle_complete", settled=count)
 
 
+async def job_check_pre_kickoff_odds_warnings():
+    """Isolated from daily_predictions / ingest_fixtures — never blocks them."""
+    try:
+        from app.services.odds_warning import OddsWarningService
+
+        stats = await OddsWarningService().run_once()
+        logger.info("job_pre_kickoff_odds_warnings_complete", **stats)
+    except Exception as exc:
+        logger.error("job_pre_kickoff_odds_warnings_failed", error=str(exc))
+
+
 def create_scheduler() -> AsyncIOScheduler:
     scheduler = AsyncIOScheduler(timezone=UTC)
 
@@ -121,6 +132,12 @@ def create_scheduler() -> AsyncIOScheduler:
         IntervalTrigger(hours=2),
         id="paper_settle",
         name="Settle paper picks + CLV + edge capture",
+    )
+    scheduler.add_job(
+        job_check_pre_kickoff_odds_warnings,
+        IntervalTrigger(minutes=5),
+        id="pre_kickoff_odds_warnings",
+        name="Pre-kickoff adverse odds warning",
     )
 
     return scheduler

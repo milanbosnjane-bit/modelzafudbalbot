@@ -301,6 +301,7 @@ class DailyPick(Base):
     played_manually: Mapped[bool] = mapped_column(Boolean, default=False)
     user_odds: Mapped[float | None] = mapped_column(Float)
     sent_to_telegram: Mapped[bool] = mapped_column(Boolean, default=False)
+    warning_sent: Mapped[bool] = mapped_column(Boolean, default=False)
     calibrated_confidence: Mapped[float | None] = mapped_column(Float)
     calibrated_ev: Mapped[float | None] = mapped_column(Float)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

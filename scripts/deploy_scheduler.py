@@ -84,20 +84,30 @@ def run(client: paramiko.SSHClient, cmd: str, timeout: int = 180) -> str:
 
 def main() -> int:
     verify_only = "--verify-only" in sys.argv
-    local = ROOT / "app" / "services" / "scheduler.py"
-    if not local.is_file():
-        safe_print(f"[GRESKA] Nedostaje {local}")
-        return 1
 
     client = paramiko.SSHClient()
     client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     client.connect(HOST, username=USER, password=PASS, timeout=30, allow_agent=False, look_for_keys=False)
 
+    files = [
+        (ROOT / "app" / "services" / "scheduler.py", f"{REMOTE}/app/services/scheduler.py"),
+        (ROOT / "app" / "services" / "odds_warning.py", f"{REMOTE}/app/services/odds_warning.py"),
+        (ROOT / "app" / "database" / "models.py", f"{REMOTE}/app/database/models.py"),
+        (ROOT / "app" / "database" / "session.py", f"{REMOTE}/app/database/session.py"),
+        (ROOT / "app" / "config.py", f"{REMOTE}/app/config.py"),
+        (ROOT / "app" / "telegram" / "bot.py", f"{REMOTE}/app/telegram/bot.py"),
+    ]
+    for path, _ in files:
+        if not path.is_file():
+            safe_print(f"[GRESKA] Nedostaje {path}")
+            return 1
+
     safe_print(f"Scheduler -> {USER}@{HOST}  (PrelaziBot :8000 netaknut)")
     sftp = client.open_sftp()
     if not verify_only:
-        sftp.put(str(local), f"{REMOTE}/app/services/scheduler.py")
-        safe_print("  upload scheduler.py")
+        for path, remote in files:
+            sftp.put(str(path), remote)
+            safe_print(f"  upload {path.name}")
         unit_installer = ROOT / "scripts" / "server" / "install_systemd.sh"
         if unit_installer.is_file():
             sftp.put(str(unit_installer), f"{REMOTE}/scripts/server/install_systemd.sh")
