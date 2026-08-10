@@ -1,10 +1,11 @@
-"""Testovi za edge-based quality filter (kvote >= 2.0)."""
+"""Testovi za edge-based quality filter (kvote >= 2.0, MAX_EV, max odds 4.50)."""
 
 from datetime import datetime
 from types import SimpleNamespace
 
 from app.predictions.pick_selector import (
     GLOBAL_MIN_ODDS,
+    MAX_EV,
     SELECTION_QUALITY_FILTERS,
     PickCandidate,
     dynamic_quality_rule,
@@ -58,13 +59,20 @@ class TestDynamicQualityRule:
         assert "odds_below_floor" in reason
         assert GLOBAL_MIN_ODDS == 2.0
 
+    def test_max_ev_rejects_longshot_mirage(self):
+        assert MAX_EV == 0.25
+        c = _candidate("match_winner", "Draw", ev=0.40, odds=4.20, calibrated_prob=0.35)
+        ok, reason = passes_selection_filter(c)
+        assert not ok
+        assert "ev_too_high" in reason
+
     def test_draw_passes_with_ev_and_edge(self):
         c = _candidate("match_winner", "Draw", ev=0.10, odds=3.0, calibrated_prob=0.40)
         ok, reason = passes_selection_filter(c)
         assert ok, reason
 
     def test_draw_rejected_low_ev(self):
-        c = _candidate("match_winner", "Draw", ev=0.02, odds=3.0, calibrated_prob=0.38)
+        c = _candidate("match_winner", "Draw", ev=0.01, odds=3.0, calibrated_prob=0.38)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "ev_too_low" in reason
@@ -74,6 +82,18 @@ class TestDynamicQualityRule:
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "edge_too_low" in reason
+
+    def test_draw_rejected_odds_above_cap(self):
+        # Draw has no hard odds cap — longshots are cut by MAX_EV instead.
+        c = _candidate("match_winner", "Draw", ev=0.40, odds=5.55, calibrated_prob=0.22)
+        ok, reason = passes_selection_filter(c)
+        assert not ok
+        assert "ev_too_high" in reason
+
+    def test_draw_moderate_odds_passes_under_ev_cap(self):
+        c = _candidate("match_winner", "Draw", ev=0.18, odds=5.55, calibrated_prob=0.212)
+        ok, reason = passes_selection_filter(c)
+        assert ok, reason
 
     def test_under25_passes_at_odds_above_floor(self):
         c = _candidate("over_under", "Under 2.5", ev=0.06, odds=2.10, calibrated_prob=0.52)
@@ -93,19 +113,19 @@ class TestDynamicQualityRule:
         assert reason == "btts_no_blocked"
 
     def test_away_rejected_low_ev(self):
-        c = _candidate("match_winner", "Away", ev=0.02, odds=4.0, calibrated_prob=0.30)
+        c = _candidate("match_winner", "Away", ev=0.01, odds=4.0, calibrated_prob=0.30)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "ev_too_low" in reason
 
     def test_away_rejected_low_edge(self):
-        c = _candidate("match_winner", "Away", ev=0.08, odds=4.0, calibrated_prob=0.26)
+        c = _candidate("match_winner", "Away", ev=0.08, odds=4.0, calibrated_prob=0.255)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "edge_too_low" in reason
 
     def test_away_rejected_odds_too_high(self):
-        c = _candidate("match_winner", "Away", ev=0.15, odds=9.0, calibrated_prob=0.20)
+        c = _candidate("match_winner", "Away", ev=0.15, odds=5.0, calibrated_prob=0.28)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "odds_too_high" in reason
@@ -120,20 +140,25 @@ class TestDynamicQualityRule:
         ok, reason = passes_selection_filter(c)
         assert ok, reason
 
+    def test_home_mid_bucket_accepts_2pct_ev(self):
+        c = _candidate("match_winner", "Home", ev=0.018, odds=2.80, calibrated_prob=0.40)
+        ok, reason = passes_selection_filter(c)
+        assert ok, reason
+
     def test_home_rejected_low_ev_mid_bucket(self):
-        c = _candidate("match_winner", "Home", ev=0.025, odds=2.80, calibrated_prob=0.40)
+        c = _candidate("match_winner", "Home", ev=0.01, odds=2.80, calibrated_prob=0.40)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "ev_too_low" in reason
 
     def test_away_borderline_now_passes_relaxed_high_bucket(self):
-        # Edge 5.0pp @4.50 — ispod starog 6pp, iznad novog 5pp
+        # Edge ~5pp @4.50 — above high-bucket 3.5pp; EV under MAX_EV
         c = _candidate("match_winner", "Away", ev=0.22, odds=4.50, calibrated_prob=0.273)
         ok, reason = passes_selection_filter(c)
         assert ok, reason
 
     def test_home_rejected_odds_above_cap(self):
-        c = _candidate("match_winner", "Home", ev=0.10, odds=7.50, calibrated_prob=0.20)
+        c = _candidate("match_winner", "Home", ev=0.10, odds=5.40, calibrated_prob=0.24)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "odds_too_high" in reason
@@ -147,3 +172,5 @@ class TestDynamicQualityRule:
         assert ("match_winner", "home") in SELECTION_QUALITY_FILTERS
         assert ("match_winner", "away") in SELECTION_QUALITY_FILTERS
         assert ("match_winner", "draw") not in SELECTION_QUALITY_FILTERS
+        assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["max_odds"] == 4.50
+        assert SELECTION_QUALITY_FILTERS[("match_winner", "away")]["max_odds"] == 4.50

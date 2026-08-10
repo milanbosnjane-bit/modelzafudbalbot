@@ -390,49 +390,56 @@ MIN_PICK_STAKE_UNITS = 1.0
 
 # Globalni floor — fokus na kvote > 2.0
 GLOBAL_MIN_ODDS = 2.0
+# Hard EV ceiling — cuts longshot mirages (reject, do not clip for ranking).
+MAX_EV = float(settings.max_ev_threshold)
+# Mid-odds upper bound for relaxed min-EV (2.00–3.50).
+MID_ODDS_MAX = 3.50
 
-# Draw i Under 2.5 — minimum EV i edge (pp)
+# Draw / Under / BTTS Yes — min EV & edge (pp). Longshots cut by MAX_EV.
 SECONDARY_MARKET_RULES = {
-    "min_ev": 0.03,
-    "min_edge_pp": 3.0,
+    "min_ev": 0.015,
+    "min_edge_pp": 2.0,
 }
 
-# Home/Away — bucket pragovi: mid = 2.0–3.0, high = > 3.0
-# Relaxed 2026-08: −1pp edge, −1% EV (više 1X2 kandidata; max_odds ne diramo)
+# Home/Away — bucket pragovi: mid = 2.0–3.50, high = > 3.50
+# 2026-08 volume fix: mid min EV 1.5%, max odds 4.50, MAX_EV 25%.
 SELECTION_QUALITY_FILTERS: dict[tuple[str, str], dict] = {
     ("match_winner", "home"): {
-        "min_ev_by_bucket": {"mid": 0.03, "high": 0.03},
-        "min_edge_pp_by_bucket": {"mid": 3.0, "high": 4.0},
-        "max_odds": 7.0,
+        "min_ev_by_bucket": {"mid": 0.015, "high": 0.02},
+        "min_edge_pp_by_bucket": {"mid": 1.5, "high": 2.0},
+        "max_odds": 4.50,
     },
     ("match_winner", "away"): {
-        "min_ev_by_bucket": {"mid": 0.03, "high": 0.03},
-        "min_edge_pp_by_bucket": {"mid": 4.0, "high": 5.0},
-        "max_odds": 8.0,
+        "min_ev_by_bucket": {"mid": 0.015, "high": 0.02},
+        "min_edge_pp_by_bucket": {"mid": 2.0, "high": 2.5},
+        "max_odds": 4.50,
     },
 }
 
 
 def _odds_bucket_category(odds: float) -> str:
-    """mid: [2.0, 3.0], high: > 3.0 (ispod 2.0 se odbija globalno)."""
-    return "high" if odds > 3.0 else "mid"
+    """mid: [2.0, 3.50], high: > 3.50 (ispod 2.0 se odbija globalno)."""
+    return "high" if odds > MID_ODDS_MAX else "mid"
 
 
 def _edge_pp(model_prob: float, fair_implied: float) -> float:
     return (model_prob - fair_implied) * 100.0
 
 
-def _is_draw_or_under(candidate: "PickCandidate") -> bool:
+def _is_secondary_selection(candidate: "PickCandidate") -> bool:
+    """Draw, Under 2.5, and BTTS Yes use secondary EV/edge floors."""
     sel = candidate.selection.lower().strip()
     if candidate.market == "match_winner" and sel in DRAW_SELECTIONS:
         return True
     if candidate.market == "over_under" and "under" in sel:
         return True
+    if candidate.market == "btts" and sel in {"yes", "btts yes"}:
+        return True
     return False
 
 
 def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
-    """Edge-based filter sa globalnim min kvotom 2.0."""
+    """Edge-based filter sa globalnim min kvotom 2.0 i MAX_EV plafonom."""
     if not passes_prediction_type_filter(
         candidate.market, candidate.selection, candidate.line
     ):
@@ -443,6 +450,9 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
         return False, f"odds_below_floor ({odds:.2f} < {GLOBAL_MIN_ODDS})"
 
     ev = candidate.ensemble.expected_value
+    if ev > MAX_EV:
+        return False, f"selection_ev_too_high ({ev:.3f} > {MAX_EV})"
+
     fair = candidate.fair_implied_prob or (1.0 / odds if odds > 1.0 else 0.5)
     model_prob = candidate.ensemble.calibrated_probability
     edge = _edge_pp(model_prob, fair)
@@ -451,7 +461,7 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
     rules = SELECTION_QUALITY_FILTERS.get(key)
 
     if rules is None:
-        if _is_draw_or_under(candidate):
+        if _is_secondary_selection(candidate):
             min_ev = SECONDARY_MARKET_RULES["min_ev"]
             min_edge = SECONDARY_MARKET_RULES["min_edge_pp"]
             if ev < min_ev:
@@ -752,8 +762,11 @@ class PickSelectionEngine:
                         selection=selection,
                         odds=decimal_odds,
                         opening_odds=None,
-                        fair_implied_prob=0.0,
-                        line=None,
+                        fair_implied_prob=odds_info.get(
+                            "fair_prob", result.fair_implied_prob
+                        )
+                        or result.fair_implied_prob,
+                        line=odds_info.get("line"),
                         market_regime=regime.regime.value,
                         ensemble=result,
                     )

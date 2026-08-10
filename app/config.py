@@ -45,6 +45,8 @@ class Settings(BaseSettings):
         return [part.strip() for part in raw.split(",") if part.strip()]
 
     min_ev_threshold: float = 0.015
+    # Hard ceiling — reject longshot EV mirages (backtest avg EV was +52%).
+    max_ev_threshold: float = 0.25
     min_confidence_threshold: float = 0.55
     max_daily_picks: int = 6
     kelly_fraction: float = 0.25
