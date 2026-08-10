@@ -485,8 +485,10 @@ class PickSelectionEngine:
     """
 
     MIN_LIQUIDITY_BOOKMAKERS = 2
-    # Core markets only — asian_handicap excluded (too many lines, weak model support).
-    PICK_MARKETS = frozenset({"match_winner", "over_under", "btts"})
+    # Core markets for live tip selection. over_under paused 2026-08 after
+    # −22% ROI on settled sample; odds for OU may still be ingested via
+    # supported_markets for features, but PICK_MARKETS blocks tip generation.
+    PICK_MARKETS = frozenset({"match_winner", "btts"})
     REJECTED_REASONS = frozenset({
         "invalid_market",
         "invalid_odds",

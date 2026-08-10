@@ -1,17 +1,17 @@
 {
   "default_rho": -0.13,
-  "xg_scale": 1.360513,
-  "home_advantage": 0.95,
+  "xg_scale": 1.324953,
+  "home_advantage": 0.971055,
   "rho_by_league": {
-    "1": -0.199184,
+    "1": -0.199315,
     "76": -0.249996
   },
-  "calibrated_at": "2026-07-25T19:28:20.250815",
-  "sample_size": 125,
-  "league_count": 8,
+  "calibrated_at": "2026-08-10T06:59:14.758573",
+  "sample_size": 148,
+  "league_count": 9,
   "leagues_calibrated": 2,
   "xi": 0.0018,
   "exclude_legacy": true,
-  "log_likelihood": -346.7669,
-  "lookback_days": 365
+  "log_likelihood": -414.018,
+  "lookback_days": 2000
 }

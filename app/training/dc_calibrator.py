@@ -312,6 +312,10 @@ class DixonColesCalibrator:
             lookback_days=lookback_days,
         )
         params = self.fit(rows)
+        if lookback_days is not None:
+            params["lookback_days"] = lookback_days
+        elif start_date is not None and end_date is not None:
+            params["lookback_days"] = max(1, (end_date - start_date).days)
         path = self.save_params(params)
         params["params_path"] = str(path)
         return params

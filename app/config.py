@@ -60,7 +60,7 @@ class Settings(BaseSettings):
 
     # Realistic execution
     backtest_slippage_pct: float = 0.015
-    probability_shrink_weight: float = 0.35
+    probability_shrink_weight: float = 0.55
     max_stake_pct_bankroll: float = 0.02
     default_bankroll: float = 100.0
     paper_trading_enabled: bool = True
@@ -96,9 +96,8 @@ class Settings(BaseSettings):
     model_dir: Path = Path("./data/models")
     feature_dir: Path = Path("./data/features")
 
-    # The three full-time markets the models predict. double_chance and
-    # asian_handicap are absent because PICK_MARKETS can never select them, so
-    # ingesting them only cost snapshot rows and de-vig noise.
+    # Ingested odds markets (features / fair probs). Live tip selection is
+    # narrower: see PickSelectionEngine.PICK_MARKETS (over_under paused).
     supported_markets: list[str] = Field(
         default=[
             "match_winner",
