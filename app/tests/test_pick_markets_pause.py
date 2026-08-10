@@ -14,5 +14,8 @@ def test_supported_markets_still_ingest_over_under():
     assert "over_under" in get_settings().supported_markets
 
 
-def test_probability_shrink_weight_increased():
-    assert get_settings().probability_shrink_weight == 0.55
+def test_probability_shrink_weight_balanced():
+    from app.config import Settings
+
+    get_settings.cache_clear()
+    assert Settings.model_fields["probability_shrink_weight"].default == 0.45

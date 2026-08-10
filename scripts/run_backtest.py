@@ -27,7 +27,7 @@ os.environ.setdefault("LOCAL_MODE", "true")
 os.environ.setdefault("USE_MEMORY_CACHE", "true")
 os.environ.setdefault("APP_DEBUG", "false")
 # Production shrink (env overrides Settings default)
-os.environ["PROBABILITY_SHRINK_WEIGHT"] = "0.55"
+os.environ["PROBABILITY_SHRINK_WEIGHT"] = "0.45"
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
@@ -374,17 +374,17 @@ async def main() -> None:
     settings = get_settings()
 
     assert PickSelectionEngine.PICK_MARKETS == frozenset({"match_winner", "btts"})
-    if abs(settings.probability_shrink_weight - 0.55) > 1e-9:
+    if abs(settings.probability_shrink_weight - 0.45) > 1e-9:
         print(
             f"[WARN] probability_shrink_weight={settings.probability_shrink_weight} "
-            "(expected 0.55)"
+            "(expected 0.45)"
         )
 
     await init_db()
 
     print()
     print(f"=== RUNNING BACKTEST {start.date()} → {end.date()} ===")
-    print("  Rules: production PickSelectionEngine (OU paused, shrink 0.55)")
+    print("  Rules: production PickSelectionEngine (OU paused, shrink 0.45)")
     print("  (može potrajati nekoliko minuta...)")
     print()
 

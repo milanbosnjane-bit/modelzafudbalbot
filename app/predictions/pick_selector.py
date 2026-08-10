@@ -396,48 +396,41 @@ MAX_EV = float(settings.max_ev_threshold)
 DEFAULT_MAX_ODDS = 4.50
 # Tighter Draw (X) cap — eliminate longshot remiji.
 DRAW_MAX_ODDS = 3.60
-# BTTS mid band (2.00–3.00) vs upper band (3.00–4.50).
-BTTS_MID_ODDS_MAX = 3.00
 
-# Draw (X) — stricter EV/edge + max odds 3.60
+# Draw (X) — odds 2.00–3.60, EV/edge 3.0%
 DRAW_RULES = {
-    "min_ev": 0.035,
-    "min_edge_pp": 3.5,
+    "min_ev": 0.030,
+    "min_edge_pp": 3.0,
     "max_odds": DRAW_MAX_ODDS,
 }
 
-# BTTS Yes — only priced >= 2.00; mid band 2–3 uses 2% EV / 2pp edge
+# BTTS Yes — odds 2.00–4.50, EV/edge 1.5%
 BTTS_YES_RULES = {
-    "min_ev_by_bucket": {"mid": 0.02, "high": 0.02},
-    "min_edge_pp_by_bucket": {"mid": 2.0, "high": 2.0},
+    "min_ev": 0.015,
+    "min_edge_pp": 1.5,
     "max_odds": DEFAULT_MAX_ODDS,
 }
 
-# Under 2.5 (paused from tips, still ingestable) — keep secondary floor
+# Under 2.5 (paused from tips, still ingestable)
 UNDER_RULES = {
-    "min_ev": 0.02,
-    "min_edge_pp": 2.0,
+    "min_ev": 0.015,
+    "min_edge_pp": 1.5,
     "max_odds": DEFAULT_MAX_ODDS,
 }
 
-# Home/Away — flat 2% EV / 2pp edge across odds 2.00–4.50
+# Home/Away — odds 2.00–4.50, EV/edge 1.5%
 SELECTION_QUALITY_FILTERS: dict[tuple[str, str], dict] = {
     ("match_winner", "home"): {
-        "min_ev": 0.02,
-        "min_edge_pp": 2.0,
+        "min_ev": 0.015,
+        "min_edge_pp": 1.5,
         "max_odds": DEFAULT_MAX_ODDS,
     },
     ("match_winner", "away"): {
-        "min_ev": 0.02,
-        "min_edge_pp": 2.0,
+        "min_ev": 0.015,
+        "min_edge_pp": 1.5,
         "max_odds": DEFAULT_MAX_ODDS,
     },
 }
-
-
-def _btts_odds_bucket(odds: float) -> str:
-    """mid: [2.0, 3.0], high: (3.0, 4.50]."""
-    return "high" if odds > BTTS_MID_ODDS_MAX else "mid"
 
 
 def _edge_pp(model_prob: float, fair_implied: float) -> float:
@@ -493,13 +486,12 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
         )
 
     if candidate.market == "btts" and sel in {"yes", "btts yes"}:
-        bucket = _btts_odds_bucket(odds)
         return _apply_flat_rules(
             odds=odds,
             ev=ev,
             edge=edge,
-            min_ev=BTTS_YES_RULES["min_ev_by_bucket"][bucket],
-            min_edge_pp=BTTS_YES_RULES["min_edge_pp_by_bucket"][bucket],
+            min_ev=BTTS_YES_RULES["min_ev"],
+            min_edge_pp=BTTS_YES_RULES["min_edge_pp"],
             max_odds=BTTS_YES_RULES["max_odds"],
         )
 

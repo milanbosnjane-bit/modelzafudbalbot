@@ -66,7 +66,7 @@ class Settings(BaseSettings):
 
     # Realistic execution
     backtest_slippage_pct: float = 0.015
-    probability_shrink_weight: float = 0.55
+    probability_shrink_weight: float = 0.45
     max_stake_pct_bankroll: float = 0.02
     default_bankroll: float = 100.0
     paper_trading_enabled: bool = True
