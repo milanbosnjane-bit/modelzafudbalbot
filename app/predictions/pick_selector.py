@@ -388,58 +388,82 @@ class SelectedPick:
 
 MIN_PICK_STAKE_UNITS = 1.0
 
-# Globalni floor — fokus na kvote > 2.0
+# Absolute floor — never tip below 2.00 on any market.
 GLOBAL_MIN_ODDS = 2.0
-# Hard EV ceiling — cuts longshot mirages (reject, do not clip for ranking).
+# Hard EV ceiling — cuts longshot mirages.
 MAX_EV = float(settings.max_ev_threshold)
-# Mid-odds upper bound for relaxed min-EV (2.00–3.50).
-MID_ODDS_MAX = 3.50
+# Default cap for Home / Away / BTTS Yes.
+DEFAULT_MAX_ODDS = 4.50
+# Tighter Draw (X) cap — eliminate longshot remiji.
+DRAW_MAX_ODDS = 3.60
+# BTTS mid band (2.00–3.00) vs upper band (3.00–4.50).
+BTTS_MID_ODDS_MAX = 3.00
 
-# Draw / Under / BTTS Yes — min EV & edge (pp). Longshots cut by MAX_EV.
-SECONDARY_MARKET_RULES = {
-    "min_ev": 0.015,
-    "min_edge_pp": 2.0,
+# Draw (X) — stricter EV/edge + max odds 3.60
+DRAW_RULES = {
+    "min_ev": 0.035,
+    "min_edge_pp": 3.5,
+    "max_odds": DRAW_MAX_ODDS,
 }
 
-# Home/Away — bucket pragovi: mid = 2.0–3.50, high = > 3.50
-# 2026-08 volume fix: mid min EV 1.5%, max odds 4.50, MAX_EV 25%.
+# BTTS Yes — only priced >= 2.00; mid band 2–3 uses 2% EV / 2pp edge
+BTTS_YES_RULES = {
+    "min_ev_by_bucket": {"mid": 0.02, "high": 0.02},
+    "min_edge_pp_by_bucket": {"mid": 2.0, "high": 2.0},
+    "max_odds": DEFAULT_MAX_ODDS,
+}
+
+# Under 2.5 (paused from tips, still ingestable) — keep secondary floor
+UNDER_RULES = {
+    "min_ev": 0.02,
+    "min_edge_pp": 2.0,
+    "max_odds": DEFAULT_MAX_ODDS,
+}
+
+# Home/Away — flat 2% EV / 2pp edge across odds 2.00–4.50
 SELECTION_QUALITY_FILTERS: dict[tuple[str, str], dict] = {
     ("match_winner", "home"): {
-        "min_ev_by_bucket": {"mid": 0.015, "high": 0.02},
-        "min_edge_pp_by_bucket": {"mid": 1.5, "high": 2.0},
-        "max_odds": 4.50,
+        "min_ev": 0.02,
+        "min_edge_pp": 2.0,
+        "max_odds": DEFAULT_MAX_ODDS,
     },
     ("match_winner", "away"): {
-        "min_ev_by_bucket": {"mid": 0.015, "high": 0.02},
-        "min_edge_pp_by_bucket": {"mid": 2.0, "high": 2.5},
-        "max_odds": 4.50,
+        "min_ev": 0.02,
+        "min_edge_pp": 2.0,
+        "max_odds": DEFAULT_MAX_ODDS,
     },
 }
 
 
-def _odds_bucket_category(odds: float) -> str:
-    """mid: [2.0, 3.50], high: > 3.50 (ispod 2.0 se odbija globalno)."""
-    return "high" if odds > MID_ODDS_MAX else "mid"
+def _btts_odds_bucket(odds: float) -> str:
+    """mid: [2.0, 3.0], high: (3.0, 4.50]."""
+    return "high" if odds > BTTS_MID_ODDS_MAX else "mid"
 
 
 def _edge_pp(model_prob: float, fair_implied: float) -> float:
     return (model_prob - fair_implied) * 100.0
 
 
-def _is_secondary_selection(candidate: "PickCandidate") -> bool:
-    """Draw, Under 2.5, and BTTS Yes use secondary EV/edge floors."""
-    sel = candidate.selection.lower().strip()
-    if candidate.market == "match_winner" and sel in DRAW_SELECTIONS:
-        return True
-    if candidate.market == "over_under" and "under" in sel:
-        return True
-    if candidate.market == "btts" and sel in {"yes", "btts yes"}:
-        return True
-    return False
+def _apply_flat_rules(
+    *,
+    odds: float,
+    ev: float,
+    edge: float,
+    min_ev: float,
+    min_edge_pp: float,
+    max_odds: float,
+) -> tuple[bool, str | None]:
+    if odds > max_odds:
+        return False, f"selection_odds_too_high ({odds:.2f} > {max_odds})"
+    if ev < min_ev:
+        return False, f"selection_ev_too_low ({ev:.3f} < {min_ev})"
+    if edge < min_edge_pp:
+        return False, f"selection_edge_too_low ({edge:.1f}pp < {min_edge_pp}pp)"
+    return True, None
 
 
 def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
-    """Edge-based filter sa globalnim min kvotom 2.0 i MAX_EV plafonom."""
+    """Strict min odds 2.00, MAX_EV, and per-selection EV/edge/odds caps."""
     if not passes_prediction_type_filter(
         candidate.market, candidate.selection, candidate.line
     ):
@@ -456,31 +480,55 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
     fair = candidate.fair_implied_prob or (1.0 / odds if odds > 1.0 else 0.5)
     model_prob = candidate.ensemble.calibrated_probability
     edge = _edge_pp(model_prob, fair)
+    sel = candidate.selection.lower().strip()
 
-    key = (candidate.market, candidate.selection.lower().strip())
+    if candidate.market == "match_winner" and sel in DRAW_SELECTIONS:
+        return _apply_flat_rules(
+            odds=odds,
+            ev=ev,
+            edge=edge,
+            min_ev=DRAW_RULES["min_ev"],
+            min_edge_pp=DRAW_RULES["min_edge_pp"],
+            max_odds=DRAW_RULES["max_odds"],
+        )
+
+    if candidate.market == "btts" and sel in {"yes", "btts yes"}:
+        bucket = _btts_odds_bucket(odds)
+        return _apply_flat_rules(
+            odds=odds,
+            ev=ev,
+            edge=edge,
+            min_ev=BTTS_YES_RULES["min_ev_by_bucket"][bucket],
+            min_edge_pp=BTTS_YES_RULES["min_edge_pp_by_bucket"][bucket],
+            max_odds=BTTS_YES_RULES["max_odds"],
+        )
+
+    if candidate.market == "over_under" and "under" in sel:
+        return _apply_flat_rules(
+            odds=odds,
+            ev=ev,
+            edge=edge,
+            min_ev=UNDER_RULES["min_ev"],
+            min_edge_pp=UNDER_RULES["min_edge_pp"],
+            max_odds=UNDER_RULES["max_odds"],
+        )
+
+    key = (candidate.market, sel)
     rules = SELECTION_QUALITY_FILTERS.get(key)
-
     if rules is None:
-        if _is_secondary_selection(candidate):
-            min_ev = SECONDARY_MARKET_RULES["min_ev"]
-            min_edge = SECONDARY_MARKET_RULES["min_edge_pp"]
-            if ev < min_ev:
-                return False, f"selection_ev_too_low ({ev:.3f} < {min_ev})"
-            if edge < min_edge:
-                return False, f"selection_edge_too_low ({edge:.1f}pp < {min_edge}pp)"
+        # Unknown selection — still enforce global floor/cap/EV already checked.
+        if odds > DEFAULT_MAX_ODDS:
+            return False, f"selection_odds_too_high ({odds:.2f} > {DEFAULT_MAX_ODDS})"
         return True, None
 
-    bucket = _odds_bucket_category(odds)
-    min_ev = rules["min_ev_by_bucket"][bucket]
-    min_edge = rules["min_edge_pp_by_bucket"][bucket]
-
-    if ev < min_ev:
-        return False, f"selection_ev_too_low ({ev:.3f} < {min_ev})"
-    if edge < min_edge:
-        return False, f"selection_edge_too_low ({edge:.1f}pp < {min_edge}pp)"
-    if odds > rules.get("max_odds", 99.0):
-        return False, f"selection_odds_too_high ({odds:.2f} > {rules['max_odds']})"
-    return True, None
+    return _apply_flat_rules(
+        odds=odds,
+        ev=ev,
+        edge=edge,
+        min_ev=rules["min_ev"],
+        min_edge_pp=rules["min_edge_pp"],
+        max_odds=rules["max_odds"],
+    )
 
 
 def passes_selection_filter(candidate: "PickCandidate") -> tuple[bool, str | None]:

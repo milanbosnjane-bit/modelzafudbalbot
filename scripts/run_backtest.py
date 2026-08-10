@@ -186,6 +186,46 @@ def market_segments(picks: list[dict]) -> dict[str, dict]:
     return by
 
 
+def selection_label(pick: dict) -> str:
+    market = (pick.get("market") or "").lower()
+    sel = (pick.get("selection") or "").lower().strip()
+    if market == "btts":
+        return "BTTS Yes" if "yes" in sel else f"BTTS {pick.get('selection')}"
+    if market == "match_winner":
+        if sel in {"home", "1", "h"}:
+            return "Home"
+        if sel in {"away", "2", "a"}:
+            return "Away"
+        if sel in {"draw", "x", "tie"}:
+            return "Draw"
+    return f"{pick.get('market')}/{pick.get('selection')}"
+
+
+def selection_segments(picks: list[dict]) -> dict[str, dict]:
+    by: dict[str, dict] = {}
+    for p in picks:
+        key = selection_label(p)
+        bucket = by.setdefault(key, {"n": 0, "wins": 0, "staked": 0.0, "profit": 0.0})
+        bucket["n"] += 1
+        bucket["staked"] += float(p.get("stake") or 0.0)
+        bucket["profit"] += float(p.get("profit") or 0.0)
+        if p.get("outcome") == "win":
+            bucket["wins"] += 1
+    return by
+
+
+def _print_segment_row(label: str, s: dict | None) -> None:
+    if not s:
+        print(f"  {label:16}  (no picks)")
+        return
+    roi = (s["profit"] / s["staked"] * 100.0) if s["staked"] else 0.0
+    wr = (s["wins"] / s["n"] * 100.0) if s["n"] else 0.0
+    print(
+        f"  {label:16}  n={s['n']:4}  WR={wr:5.1f}%  "
+        f"staked={s['staked']:.1f}u  P/L={s['profit']:+.2f}u  ROI={roi:+.1f}%"
+    )
+
+
 def calibration_metrics(picks: list[dict]) -> dict:
     settled = [p for p in picks if p.get("outcome") in ("win", "lose")]
     if not settled:
@@ -219,6 +259,7 @@ def print_report(
     bankroll: dict,
     calib: dict,
     segments: dict[str, dict],
+    sel_segments: dict[str, dict],
     settings,
 ) -> None:
     print()
@@ -227,12 +268,20 @@ def print_report(
     print("=" * 64)
     print(f"  Period:              {start.date()} → {end.date()}")
     print(f"  API FT fixtures:     {stats['api_n']}  ({stats['api_min']} → {stats['api_max']})")
-    from app.predictions.pick_selector import PickSelectionEngine
+    from app.predictions.pick_selector import (
+        DEFAULT_MAX_ODDS,
+        DRAW_MAX_ODDS,
+        GLOBAL_MIN_ODDS,
+        PickSelectionEngine,
+    )
 
     print(f"  PICK_MARKETS:        {sorted(PickSelectionEngine.PICK_MARKETS)}")
     print(f"  shrink_weight:       {settings.probability_shrink_weight}")
-    print(f"  min_odds / max_day:  2.00 / {settings.max_daily_picks}")
-    print(f"  kelly / max stake:   {settings.kelly_fraction} / {settings.max_stake_pct_bankroll:.0%}")
+    print(
+        f"  odds floor/caps:     min={GLOBAL_MIN_ODDS:.2f}  "
+        f"H/A/BTTS max={DEFAULT_MAX_ODDS:.2f}  Draw max={DRAW_MAX_ODDS:.2f}"
+    )
+    print(f"  max_day / kelly:     {settings.max_daily_picks} / {settings.kelly_fraction}")
     print()
 
     print("--- FINANCIALS ---")
@@ -245,26 +294,20 @@ def print_report(
     print(f"  Sharpe (daily):      {result.sharpe_ratio:.2f}")
     print()
 
+    print("--- BY SELECTION (Home / Away / Draw / BTTS) ---")
+    for label in ("Home", "Away", "Draw", "BTTS Yes"):
+        _print_segment_row(label, sel_segments.get(label))
+    extra = [k for k in sel_segments if k not in ("Home", "Away", "Draw", "BTTS Yes")]
+    for label in extra:
+        _print_segment_row(label, sel_segments[label])
+    print()
+
     print("--- BY MARKET ---")
     for market in ("match_winner", "btts"):
-        s = segments.get(market)
-        if not s:
-            print(f"  {market:16}  (no picks)")
-            continue
-        roi = (s["profit"] / s["staked"] * 100.0) if s["staked"] else 0.0
-        wr = (s["wins"] / s["n"] * 100.0) if s["n"] else 0.0
-        print(
-            f"  {market:16}  n={s['n']:4}  WR={wr:5.1f}%  "
-            f"staked={s['staked']:.1f}u  P/L={s['profit']:+.2f}u  ROI={roi:+.1f}%"
-        )
+        _print_segment_row(market, segments.get(market))
     other = [m for m in segments if m not in ("match_winner", "btts")]
     for market in other:
-        s = segments[market]
-        roi = (s["profit"] / s["staked"] * 100.0) if s["staked"] else 0.0
-        wr = (s["wins"] / s["n"] * 100.0) if s["n"] else 0.0
-        print(
-            f"  {market:16}  n={s['n']:4}  WR={wr:5.1f}%  ROI={roi:+.1f}%  (unexpected)"
-        )
+        _print_segment_row(f"{market} (unexpected)", segments[market])
     print()
 
     print("--- MODEL CALIBRATION ---")
@@ -349,6 +392,7 @@ async def main() -> None:
     result = await engine.run(start, end, name=args.name)
 
     segments = market_segments(result.picks)
+    sel_segments = selection_segments(result.picks)
     calib = calibration_metrics(result.picks)
     bankroll = simulate_bankroll(result.picks, INITIAL_BANKROLL)
 
@@ -360,6 +404,7 @@ async def main() -> None:
         bankroll=bankroll,
         calib=calib,
         segments=segments,
+        sel_segments=sel_segments,
         settings=settings,
     )
 

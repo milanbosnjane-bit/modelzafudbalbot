@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     min_ev_threshold: float = 0.015
     # Hard ceiling — reject longshot EV mirages (backtest avg EV was +52%).
     max_ev_threshold: float = 0.25
+    # Absolute tip odds floor (enforced in pick_selector.GLOBAL_MIN_ODDS).
+    min_pick_odds: float = 2.0
+    # Home / Away / BTTS Yes odds cap (Draw uses tighter 3.60 in selector).
+    max_pick_odds: float = 4.50
     min_confidence_threshold: float = 0.55
     max_daily_picks: int = 6
     kelly_fraction: float = 0.25
