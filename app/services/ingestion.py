@@ -493,9 +493,9 @@ class DataIngestionService:
             current_odds = row["current_odds"]
             raw_implied = implied_probability(current_odds)
             fair_p = fair_probs.get(key, {}).get(row["selection"])
-            if fair_p is None:
-                fair_p = raw_implied
-            elif not fair_prob_matches_closing_odds(fair_p, current_odds):
+            # Never store raw 1/odds as "fair" — that keeps the bookmaker margin
+            # and poisons probability shrinkage toward a vigged target.
+            if fair_p is not None and not fair_prob_matches_closing_odds(fair_p, current_odds):
                 logger.warning(
                     "FAIR_PROB_INVALID",
                     fixture_id=fixture_id,

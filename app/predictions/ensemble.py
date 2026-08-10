@@ -186,6 +186,8 @@ class ProbabilityEngine:
         calibrated = shrink_probability(
             model_prob, fair_implied, weight=settings.probability_shrink_weight
         )
+        # Shrink target is always the passed/resolved *fair* (devigged) probability —
+        # never raw 1/odds (margin still embedded).
         if not is_valid_probability(calibrated):
             return self._rejected("probability_out_of_bounds", bookmaker_odds)
 

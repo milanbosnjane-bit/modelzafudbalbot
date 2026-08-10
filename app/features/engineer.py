@@ -264,26 +264,38 @@ class FeatureEngineer:
             by_book_market.setdefault((bm, market, line), []).append(snap)
 
         for (bm, market, line), snaps in by_book_market.items():
-            odds_list = [s.current_odds for s in snaps if s.current_odds > 1.0]
-            if len(odds_list) < 2:
+            valid = [s for s in snaps if s.current_odds and s.current_odds > 1.0]
+            if len(valid) < 2:
                 continue
+            odds_list = [s.current_odds for s in valid]
             fair = proportional_devig(odds_list)
             overrounds.append(sum(implied_probability(o) for o in odds_list) - 1.0)
 
-            if market == "match_winner" and len(fair) >= 3:
-                home_fair.append(fair[0])
-                draw_fair.append(fair[1] if len(fair) > 1 else fair[0])
-                away_fair.append(fair[2] if len(fair) > 2 else fair[-1])
-                for s in snaps:
-                    sel = s.selection.lower()
+            if market == "match_winner" and len(fair) >= 2:
+                for s, fp in zip(valid, fair):
+                    sel = (s.selection or "").lower().strip()
+                    if sel in ("home", "1"):
+                        home_fair.append(fp)
+                    elif sel in ("draw", "x"):
+                        draw_fair.append(fp)
+                    elif sel in ("away", "2"):
+                        away_fair.append(fp)
+                for s in valid:
+                    sel = (s.selection or "").lower().strip()
                     if sel in ("home", "1"):
                         open_o = opening.get((bm, market, s.selection, line), s.current_odds)
                         if open_o:
                             home_changes.append((s.current_odds - open_o) / open_o)
             elif market == "over_under" and line == 2.5 and len(fair) >= 2:
-                over_fair.append(fair[0])
+                for s, fp in zip(valid, fair):
+                    sel = (s.selection or "").lower()
+                    if "over" in sel:
+                        over_fair.append(fp)
             elif market == "btts" and len(fair) >= 2:
-                btts_fair.append(fair[0])
+                for s, fp in zip(valid, fair):
+                    sel = (s.selection or "").lower()
+                    if sel in ("yes", "btts yes") or sel == "yes":
+                        btts_fair.append(fp)
 
         def avg(lst: list[float]) -> float | None:
             return sum(lst) / len(lst) if lst else None

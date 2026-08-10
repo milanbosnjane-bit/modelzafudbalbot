@@ -65,9 +65,31 @@ def closing_line_value_fair(
 
 
 def shrink_probability(model_prob: float, fair_implied: float, weight: float = 0.35) -> float:
-    """Shrink model probability toward fair market to reduce overbetting."""
+    """
+    Blend model probability with *devigged* fair market probability.
+
+    ``weight`` (PROBABILITY_SHRINK_WEIGHT) is the weight on the model:
+        p_shrunk = w * p_model + (1 - w) * p_fair
+
+    ``fair_implied`` must be a no-vig / proportional-devig probability (sum to 1
+    across the market), never raw 1/odds which still embeds bookmaker margin.
+    """
     w = min(1.0, max(0.0, weight))
-    return (1.0 - w) * model_prob + w * fair_implied
+    return w * model_prob + (1.0 - w) * fair_implied
+
+
+def fair_probs_from_selection_odds(selection_odds: dict[str, float]) -> dict[str, float]:
+    """
+    Proportional-devig fair probabilities keyed by selection.
+
+    selection_odds: {selection_name: decimal_odds} for one complete market.
+    Returns {} if fewer than two valid prices.
+    """
+    items = [(sel, float(odds)) for sel, odds in selection_odds.items() if odds and odds > 1.0]
+    if len(items) < 2:
+        return {}
+    fair = proportional_devig([odds for _, odds in items])
+    return {sel: fair[i] for i, (sel, _) in enumerate(items) if i < len(fair)}
 
 
 def median_odds(odds_list: list[float]) -> float:

@@ -72,8 +72,22 @@ class TestStaking:
         assert capped <= 2.0
 
     def test_shrink_probability(self):
+        # w=0.35 on model → 0.35*0.70 + 0.65*0.50 = 0.57
         shrunk = shrink_probability(0.70, 0.50, weight=0.35)
+        assert shrunk == pytest.approx(0.57)
         assert 0.50 < shrunk < 0.70
+
+    def test_fair_probs_from_selection_odds_devigs(self):
+        from app.utils.odds import fair_probs_from_selection_odds
+
+        # Overround market: raw implied sum > 1
+        fair = fair_probs_from_selection_odds(
+            {"home": 2.10, "draw": 3.40, "away": 3.60}
+        )
+        assert set(fair) == {"home", "draw", "away"}
+        assert sum(fair.values()) == pytest.approx(1.0, abs=1e-9)
+        # Fair home < raw 1/2.10 (margin removed)
+        assert fair["home"] < (1.0 / 2.10)
 
 
 class TestEnsemble:

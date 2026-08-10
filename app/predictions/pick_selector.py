@@ -29,7 +29,7 @@ from app.predictions.context_gates import ContextGateInput, passes_context_gates
 from app.predictions.regime import MarketRegime, RegimeDetector, REGIME_WEIGHTS
 from app.utils.edge import compute_edge_metrics
 from app.utils.helpers import capped_stake, decision_time, utc_now
-from app.utils.odds import median_odds
+from app.utils.odds import median_odds, fair_probs_from_selection_odds
 
 logger = structlog.get_logger()
 settings = get_settings()
@@ -474,7 +474,9 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
     if ev > MAX_EV:
         return False, f"selection_ev_too_high ({ev:.3f} > {MAX_EV})"
 
-    fair = candidate.fair_implied_prob or (1.0 / odds if odds > 1.0 else 0.5)
+    fair = candidate.fair_implied_prob
+    if fair is None or not (0.0 < fair < 1.0):
+        return False, "missing_fair_implied"
     model_prob = candidate.ensemble.calibrated_probability
     edge = _edge_pp(model_prob, fair)
     sel = candidate.selection.lower().strip()
@@ -1321,6 +1323,17 @@ class PickSelectionEngine:
                     "bookmaker_count": len(odds_list),
                     "line": data["line"],
                 }
+            # Always re-derive fair probs from median market prices (proportional
+            # devig). Overwrites any snapshot fair that may have fallen back to
+            # raw 1/odds during ingest.
+            median_by_sel = {
+                sel: info["odds"]
+                for sel, info in result_map[market].items()
+                if info.get("odds") and info["odds"] > 1.0
+            }
+            devigged = fair_probs_from_selection_odds(median_by_sel)
+            for sel, fair_p in devigged.items():
+                result_map[market][sel]["fair_prob"] = fair_p
         return result_map
 
     async def _get_decision_odds(self, fixture_id: int, as_of: datetime) -> dict:
