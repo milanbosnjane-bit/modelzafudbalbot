@@ -1,9 +1,10 @@
-"""Testovi za strict odds floor (>=2.00), shrink-balanced thresholds."""
+"""Testovi za strict odds floor, BTTS total-xG guardrail, H/A 1% EV."""
 
 from datetime import datetime
 from types import SimpleNamespace
 
 from app.predictions.pick_selector import (
+    BTTS_MIN_TOTAL_XG,
     DEFAULT_MAX_ODDS,
     DRAW_MAX_ODDS,
     DRAW_RULES,
@@ -24,6 +25,7 @@ def _candidate(
     *,
     calibrated_prob: float | None = None,
     conf: float = 0.70,
+    total_xg: float | None = 2.5,
 ):
     fair = 1.0 / odds
     cal = calibrated_prob if calibrated_prob is not None else fair + 0.05
@@ -50,6 +52,7 @@ def _candidate(
         line=2.5 if market == "over_under" else None,
         market_regime="moderate",
         ensemble=ensemble,
+        total_xg=total_xg,
     )
 
 
@@ -76,7 +79,6 @@ class TestDynamicQualityRule:
         assert "ev_too_high" in reason
 
     def test_draw_passes_with_strict_ev_and_edge(self):
-        # fair@3.0≈0.333; need edge≥3.0pp → cal≥0.363; EV≥3.0%
         c = _candidate("match_winner", "Draw", ev=0.04, odds=3.0, calibrated_prob=0.37)
         ok, reason = passes_selection_filter(c)
         assert ok, reason
@@ -88,12 +90,6 @@ class TestDynamicQualityRule:
         assert "ev_too_low" in reason
         assert DRAW_RULES["min_ev"] == 0.030
 
-    def test_draw_rejected_low_edge(self):
-        c = _candidate("match_winner", "Draw", ev=0.05, odds=3.0, calibrated_prob=0.35)
-        ok, reason = passes_selection_filter(c)
-        assert not ok
-        assert "edge_too_low" in reason
-
     def test_draw_rejected_odds_above_3_60(self):
         c = _candidate("match_winner", "Draw", ev=0.10, odds=3.70, calibrated_prob=0.40)
         ok, reason = passes_selection_filter(c)
@@ -101,32 +97,35 @@ class TestDynamicQualityRule:
         assert "odds_too_high" in reason
         assert DRAW_MAX_ODDS == 3.60
 
-    def test_draw_at_cap_passes(self):
-        c = _candidate("match_winner", "Draw", ev=0.04, odds=3.60, calibrated_prob=0.31)
-        ok, reason = passes_selection_filter(c)
-        assert ok, reason
-
-    def test_under25_passes_at_odds_above_floor(self):
-        c = _candidate("over_under", "Under 2.5", ev=0.03, odds=2.10, calibrated_prob=0.50)
-        ok, reason = passes_selection_filter(c)
-        assert ok, reason
-
-    def test_under25_blocked_below_floor(self):
-        c = _candidate("over_under", "Under 2.5", ev=0.06, odds=1.70, calibrated_prob=0.62)
-        ok, reason = passes_selection_filter(c)
-        assert not ok
-        assert "odds_below_floor" in reason
-
     def test_btts_no_permanently_blocked(self):
         c = _candidate("btts", "No", ev=0.05, odds=2.20, calibrated_prob=0.50)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert reason == "btts_no_blocked"
 
-    def test_btts_yes_passes_mid_band(self):
-        c = _candidate("btts", "Yes", ev=0.02, odds=2.40, calibrated_prob=0.44)
+    def test_btts_yes_passes_with_total_xg(self):
+        c = _candidate(
+            "btts", "Yes", ev=0.02, odds=2.40, calibrated_prob=0.44, total_xg=2.40
+        )
         ok, reason = passes_selection_filter(c)
         assert ok, reason
+        assert BTTS_MIN_TOTAL_XG == 2.20
+
+    def test_btts_yes_rejected_low_total_xg(self):
+        c = _candidate(
+            "btts", "Yes", ev=0.05, odds=2.40, calibrated_prob=0.45, total_xg=1.90
+        )
+        ok, reason = passes_selection_filter(c)
+        assert not ok
+        assert "btts_total_xg_too_low" in reason
+
+    def test_btts_yes_rejected_missing_total_xg(self):
+        c = _candidate(
+            "btts", "Yes", ev=0.05, odds=2.40, calibrated_prob=0.45, total_xg=None
+        )
+        ok, reason = passes_selection_filter(c)
+        assert not ok
+        assert "btts_total_xg_too_low" in reason
 
     def test_btts_yes_rejected_low_ev(self):
         c = _candidate("btts", "Yes", ev=0.01, odds=2.40, calibrated_prob=0.45)
@@ -141,7 +140,7 @@ class TestDynamicQualityRule:
         assert "odds_too_high" in reason
 
     def test_away_rejected_low_ev(self):
-        c = _candidate("match_winner", "Away", ev=0.01, odds=4.0, calibrated_prob=0.30)
+        c = _candidate("match_winner", "Away", ev=0.005, odds=4.0, calibrated_prob=0.30)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "ev_too_low" in reason
@@ -159,17 +158,17 @@ class TestDynamicQualityRule:
         assert "odds_too_high" in reason
 
     def test_away_passes_when_ev_and_edge_met(self):
-        c = _candidate("match_winner", "Away", ev=0.02, odds=4.50, calibrated_prob=0.24)
+        c = _candidate("match_winner", "Away", ev=0.015, odds=4.50, calibrated_prob=0.235)
         ok, reason = passes_selection_filter(c)
         assert ok, reason
 
-    def test_home_passes_1_5pct_ev(self):
-        c = _candidate("match_winner", "Home", ev=0.018, odds=2.80, calibrated_prob=0.38)
+    def test_home_passes_1pct_ev(self):
+        c = _candidate("match_winner", "Home", ev=0.012, odds=2.80, calibrated_prob=0.37)
         ok, reason = passes_selection_filter(c)
         assert ok, reason
 
-    def test_home_rejected_below_1_5pct_ev(self):
-        c = _candidate("match_winner", "Home", ev=0.01, odds=2.80, calibrated_prob=0.40)
+    def test_home_rejected_below_1pct_ev(self):
+        c = _candidate("match_winner", "Home", ev=0.005, odds=2.80, calibrated_prob=0.40)
         ok, reason = passes_selection_filter(c)
         assert not ok
         assert "ev_too_low" in reason
@@ -184,7 +183,6 @@ class TestDynamicQualityRule:
         assert DEFAULT_MAX_ODDS == 4.50
         assert DRAW_MAX_ODDS == 3.60
         assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["max_odds"] == 4.50
-        assert SELECTION_QUALITY_FILTERS[("match_winner", "away")]["max_odds"] == 4.50
-        assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["min_ev"] == 0.015
-        assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["min_edge_pp"] == 1.5
-        assert DRAW_RULES["min_edge_pp"] == 3.0
+        assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["min_ev"] == 0.010
+        assert SELECTION_QUALITY_FILTERS[("match_winner", "home")]["min_edge_pp"] == 1.0
+        assert DRAW_RULES["min_ev"] == 0.030

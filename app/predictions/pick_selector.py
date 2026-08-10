@@ -60,6 +60,8 @@ class PickCandidate:
     market_regime: str
     ensemble: EnsembleResult
     final_score: float = 0.0
+    # home_xG + away_xG for BTTS total-xG guardrail (optional)
+    total_xg: float | None = None
 
 
 def confidence_weight(confidence: float) -> float:
@@ -404,11 +406,13 @@ DRAW_RULES = {
     "max_odds": DRAW_MAX_ODDS,
 }
 
-# BTTS Yes — odds 2.00–4.50, EV/edge 1.5%
+# BTTS Yes — odds 2.00–4.50, EV/edge 1.5%, require combined xG >= 2.20
+BTTS_MIN_TOTAL_XG = 2.20
 BTTS_YES_RULES = {
     "min_ev": 0.015,
     "min_edge_pp": 1.5,
     "max_odds": DEFAULT_MAX_ODDS,
+    "min_total_xg": BTTS_MIN_TOTAL_XG,
 }
 
 # Under 2.5 (paused from tips, still ingestable)
@@ -418,16 +422,16 @@ UNDER_RULES = {
     "max_odds": DEFAULT_MAX_ODDS,
 }
 
-# Home/Away — odds 2.00–4.50, EV/edge 1.5%
+# Home/Away — odds 2.00–4.50, EV/edge 1.0%
 SELECTION_QUALITY_FILTERS: dict[tuple[str, str], dict] = {
     ("match_winner", "home"): {
-        "min_ev": 0.015,
-        "min_edge_pp": 1.5,
+        "min_ev": 0.010,
+        "min_edge_pp": 1.0,
         "max_odds": DEFAULT_MAX_ODDS,
     },
     ("match_winner", "away"): {
-        "min_ev": 0.015,
-        "min_edge_pp": 1.5,
+        "min_ev": 0.010,
+        "min_edge_pp": 1.0,
         "max_odds": DEFAULT_MAX_ODDS,
     },
 }
@@ -486,7 +490,7 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
         )
 
     if candidate.market == "btts" and sel in {"yes", "btts yes"}:
-        return _apply_flat_rules(
+        ok, reason = _apply_flat_rules(
             odds=odds,
             ev=ev,
             edge=edge,
@@ -494,6 +498,14 @@ def dynamic_quality_rule(candidate: "PickCandidate") -> tuple[bool, str | None]:
             min_edge_pp=BTTS_YES_RULES["min_edge_pp"],
             max_odds=BTTS_YES_RULES["max_odds"],
         )
+        if not ok:
+            return ok, reason
+        min_xg = float(BTTS_YES_RULES["min_total_xg"])
+        total_xg = candidate.total_xg
+        if total_xg is None or total_xg < min_xg:
+            shown = "None" if total_xg is None else f"{total_xg:.2f}"
+            return False, f"btts_total_xg_too_low ({shown} < {min_xg:.2f})"
+        return True, None
 
     if candidate.market == "over_under" and "under" in sel:
         return _apply_flat_rules(
@@ -791,8 +803,16 @@ class PickSelectionEngine:
                         )
                         continue
 
-                    # Per-selekcijski filter (Home/Away match_winner striktni prag).
-                    # Draw i Under 2.5 prolaze slobodno — ne diramo ih.
+                    # Per-selekcijski filter (Home/Away/Draw/BTTS + xG guardrail).
+                    home_xg = first_present(
+                        features, "home_venue_adjusted_xg", "home_weighted_xG_last5"
+                    )
+                    away_xg = first_present(
+                        features, "away_venue_adjusted_xg", "away_weighted_xG_last5"
+                    )
+                    total_xg = None
+                    if home_xg is not None and away_xg is not None:
+                        total_xg = float(home_xg) + float(away_xg)
                     _sel_tmp = PickCandidate(
                         fixture_id=fixture_id,
                         home_team="",
@@ -809,6 +829,7 @@ class PickSelectionEngine:
                         line=odds_info.get("line"),
                         market_regime=regime.regime.value,
                         ensemble=result,
+                        total_xg=total_xg,
                     )
                     sel_ok, sel_reason = passes_selection_filter(_sel_tmp)
                     if not sel_ok:

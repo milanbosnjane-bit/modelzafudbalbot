@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     min_pick_odds: float = 2.0
     # Home / Away / BTTS Yes odds cap (Draw uses tighter 3.60 in selector).
     max_pick_odds: float = 4.50
+    # BTTS total xG floor (home_xG + away_xG) for Yes selections.
+    btts_min_total_xg: float = 2.20
     min_confidence_threshold: float = 0.55
     max_daily_picks: int = 6
     kelly_fraction: float = 0.25
