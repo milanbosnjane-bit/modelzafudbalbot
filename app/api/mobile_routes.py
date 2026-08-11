@@ -55,6 +55,13 @@ class SettledPickResponse(BaseModel):
     score: str | None = None
 
 
+class OddsSelectionResponse(BaseModel):
+    """Legacy 1X2 cell — kept so older IPA builds can still decode /odds/tracker."""
+
+    odds: float
+    direction: str  # up | down | flat
+
+
 class OddsTrackerRow(BaseModel):
     fixture_id: int
     match_title: str
@@ -62,6 +69,16 @@ class OddsTrackerRow(BaseModel):
     initial_odds: float
     current_odds: float
     odds_change_pct: float
+    # Legacy fields for IPA builds that still expect the old 1X2 board schema.
+    match: str | None = None
+    home_abbr: str = ""
+    away_abbr: str = ""
+    home_logo: str | None = None
+    away_logo: str | None = None
+    home: OddsSelectionResponse | None = None
+    draw: OddsSelectionResponse | None = None
+    away: OddsSelectionResponse | None = None
+    kickoff: datetime | None = None
 
 
 class BotStatusResponse(BaseModel):
@@ -100,6 +117,41 @@ def _odds_change_pct(initial: float, current: float) -> float:
     if initial <= 0 or current <= 0:
         return 0.0
     return round(odds_change_pct(initial, current), 6)
+
+
+def _legacy_direction(change_pct: float) -> str:
+    if change_pct >= 0.005:
+        return "up"
+    if change_pct <= -0.005:
+        return "down"
+    return "flat"
+
+
+def _legacy_1x2_cells(
+    market: str,
+    selection: str,
+    current_odds: float,
+    change_pct: float,
+) -> tuple[OddsSelectionResponse, OddsSelectionResponse, OddsSelectionResponse]:
+    """Fill old IPA 1/X/2 cells with the proposed tip odds (compat shim)."""
+    active = OddsSelectionResponse(
+        odds=round(current_odds, 2),
+        direction=_legacy_direction(change_pct),
+    )
+    flat = OddsSelectionResponse(odds=0.0, direction="flat")
+    from app.utils.helpers import normalize_selection
+
+    m = (market or "").lower().replace("-", "_")
+    sel = normalize_selection(selection)
+    if m == "match_winner":
+        if sel in {"home", "1", "h"}:
+            return active, flat, flat
+        if sel in {"draw", "x", "d"}:
+            return flat, active, flat
+        if sel in {"away", "2", "a"}:
+            return flat, flat, active
+    # Non-1X2 tips: show proposed odds in the first cell so old IPA is not empty.
+    return active, flat, flat
 
 
 def _pending_outcome_filter():
@@ -311,14 +363,29 @@ async def get_odds_tracker(
         if current is None or current <= 1.0:
             current = initial
 
+        change_pct = _odds_change_pct(initial, float(current))
+        title = f"{home_name} vs {away_name}"
+        home_cell, draw_cell, away_cell = _legacy_1x2_cells(
+            pick.market, pick.selection, float(current), change_pct
+        )
+
         rows.append(
             OddsTrackerRow(
                 fixture_id=pick.fixture_id,
-                match_title=f"{home_name} vs {away_name}",
+                match_title=title,
                 pick_selection=_pick_selection_label(pick.market, pick.selection, pick.line),
                 initial_odds=round(initial, 2),
                 current_odds=round(float(current), 2),
-                odds_change_pct=_odds_change_pct(initial, float(current)),
+                odds_change_pct=change_pct,
+                match=title,
+                home_abbr=_abbr(home_name),
+                away_abbr=_abbr(away_name),
+                home_logo=getattr(home, "logo_url", None) if home else None,
+                away_logo=getattr(away, "logo_url", None) if away else None,
+                home=home_cell,
+                draw=draw_cell,
+                away=away_cell,
+                kickoff=fixture.fixture_date,
             )
         )
         if len(rows) >= limit:

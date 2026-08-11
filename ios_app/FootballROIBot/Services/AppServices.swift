@@ -208,11 +208,17 @@ final class AppState: ObservableObject {
                 botStatus = status
                 isOnline = status.status == "ok"
             }
+        } catch {
+            isOnline = false
+            lastError = error.localizedDescription
+            return
+        }
 
+        do {
             oddsRows = try await APIClient.shared.oddsTracker(limit: 20)
             lastError = nil
         } catch {
-            isOnline = false
+            // Keep DC online if health/status succeeded; only surface tracker decode/network issues.
             lastError = error.localizedDescription
         }
     }
