@@ -107,10 +107,10 @@ struct OddsTrackerPanel: View {
     let rows: [OddsTrackerRow]
     let isLoading: Bool
 
-    private let rowHeight: CGFloat = 56
-    private let visibleRows: Int = 6
+    private let rowHeight: CGFloat = 72
+    private let visibleRows: Int = 3
 
-    private var contentMinHeight: CGFloat {
+    private var panelHeight: CGFloat {
         rowHeight * CGFloat(visibleRows)
     }
 
@@ -124,22 +124,24 @@ struct OddsTrackerPanel: View {
                 if isLoading && rows.isEmpty {
                     ProgressView()
                         .tint(CyberColors.cyan)
-                        .frame(maxWidth: .infinity, minHeight: contentMinHeight)
+                        .frame(maxWidth: .infinity, minHeight: panelHeight)
                 } else if rows.isEmpty {
                     Text("Nema aktivnih kvota")
                         .font(.subheadline)
                         .foregroundStyle(CyberColors.textSecondary)
-                        .frame(maxWidth: .infinity, minHeight: contentMinHeight)
+                        .frame(maxWidth: .infinity, minHeight: panelHeight)
                 } else {
-                    VStack(spacing: 0) {
-                        ForEach(Array(rows.prefix(visibleRows).enumerated()), id: \.element.id) { index, row in
-                            OddsTrackerRowView(row: row, rowHeight: rowHeight)
-                            if index < min(rows.count, visibleRows) - 1 {
-                                Divider().background(CyberColors.cyan.opacity(0.12))
+                    ScrollView(.vertical, showsIndicators: true) {
+                        LazyVStack(spacing: 0) {
+                            ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
+                                OddsTrackerRowView(row: row, rowHeight: rowHeight)
+                                if index < rows.count - 1 {
+                                    Divider().background(CyberColors.cyan.opacity(0.12))
+                                }
                             }
                         }
                     }
-                    .frame(minHeight: contentMinHeight, alignment: .top)
+                    .frame(height: panelHeight, alignment: .top)
                 }
             }
             .padding(.horizontal, 14)
@@ -152,56 +154,54 @@ struct OddsTrackerPanel: View {
 
 struct OddsTrackerRowView: View {
     let row: OddsTrackerRow
-    var rowHeight: CGFloat = 56
+    var rowHeight: CGFloat = 72
+
+    private var changeColor: Color {
+        if row.oddsChangePct > 0.004 {
+            return CyberColors.green
+        }
+        if row.oddsChangePct < -0.004 {
+            return CyberColors.red
+        }
+        return CyberColors.textSecondary
+    }
+
+    private var changeText: String {
+        let pct = row.oddsChangePct * 100
+        let sign = pct > 0 ? "+" : ""
+        return String(format: "%@%.1f%%", sign, pct)
+    }
 
     var body: some View {
-        HStack(spacing: 10) {
-            Text(row.match)
-                .font(.system(size: 15, weight: .bold))
+        VStack(alignment: .leading, spacing: 6) {
+            Text(row.matchTitle)
+                .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(CyberColors.textPrimary)
-                .lineLimit(2)
+                .lineLimit(1)
                 .minimumScaleFactor(0.85)
-                .frame(maxWidth: .infinity, alignment: .leading)
 
-            HStack(spacing: 8) {
-                OddsCell(label: "1", selection: row.home)
-                OddsCell(label: "X", selection: row.draw)
-                OddsCell(label: "2", selection: row.away)
+            Text("🎯 Tip: \(row.pickSelection)")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(CyberColors.cyan)
+                .lineLimit(1)
+
+            HStack(spacing: 6) {
+                Text(String(format: "%.2f", row.initialOdds))
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(CyberColors.textSecondary)
+                Text("➔")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(CyberColors.textSecondary)
+                Text(String(format: "%.2f", row.currentOdds))
+                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .foregroundStyle(changeColor)
+                Text("(\(changeText))")
+                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(changeColor)
             }
         }
-        .frame(height: rowHeight)
-    }
-}
-
-struct OddsCell: View {
-    let label: String
-    let selection: OddsSelectionResponse
-
-    private var direction: OddsDirection {
-        OddsDirection(selection.direction)
-    }
-
-    var body: some View {
-        VStack(spacing: 3) {
-            Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(CyberColors.textSecondary)
-            HStack(spacing: 3) {
-                Text(String(format: "%.2f", selection.odds))
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .foregroundStyle(oddsColor)
-                NeonDirectionArrow(direction: direction)
-            }
-        }
-        .frame(minWidth: 54)
-    }
-
-    private var oddsColor: Color {
-        switch direction {
-        case .up: return CyberColors.green
-        case .down: return CyberColors.red
-        case .flat: return CyberColors.textPrimary
-        }
+        .frame(maxWidth: .infinity, minHeight: rowHeight, alignment: .leading)
+        .padding(.vertical, 4)
     }
 }
 

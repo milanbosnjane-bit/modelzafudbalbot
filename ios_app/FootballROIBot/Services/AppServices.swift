@@ -78,7 +78,7 @@ final class APIClient {
     }
 
     @MainActor
-    func oddsTracker(limit: Int = 6) async throws -> [OddsTrackerRow] {
+    func oddsTracker(limit: Int = 20) async throws -> [OddsTrackerRow] {
         try await get("/odds/tracker?limit=\(limit)")
     }
 
@@ -209,7 +209,7 @@ final class AppState: ObservableObject {
                 isOnline = status.status == "ok"
             }
 
-            oddsRows = try await APIClient.shared.oddsTracker(limit: 6)
+            oddsRows = try await APIClient.shared.oddsTracker(limit: 20)
             lastError = nil
         } catch {
             isOnline = false

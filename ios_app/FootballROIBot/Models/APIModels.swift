@@ -78,31 +78,22 @@ struct SettledPickResponse: Codable, Identifiable {
     }
 }
 
-struct OddsSelectionResponse: Codable {
-    let odds: Double
-    let direction: String
-}
-
 struct OddsTrackerRow: Codable, Identifiable {
-    var id: Int { fixtureId }
+    var id: String { "\(fixtureId)-\(pickSelection)-\(initialOdds)" }
     let fixtureId: Int
-    let match: String
-    let homeAbbr: String
-    let awayAbbr: String
-    let homeLogo: String?
-    let awayLogo: String?
-    let home: OddsSelectionResponse
-    let draw: OddsSelectionResponse
-    let away: OddsSelectionResponse
-    let kickoff: Date?
+    let matchTitle: String
+    let pickSelection: String
+    let initialOdds: Double
+    let currentOdds: Double
+    let oddsChangePct: Double
 
     enum CodingKeys: String, CodingKey {
-        case match, home, draw, away, kickoff
         case fixtureId = "fixture_id"
-        case homeAbbr = "home_abbr"
-        case awayAbbr = "away_abbr"
-        case homeLogo = "home_logo"
-        case awayLogo = "away_logo"
+        case matchTitle = "match_title"
+        case pickSelection = "pick_selection"
+        case initialOdds = "initial_odds"
+        case currentOdds = "current_odds"
+        case oddsChangePct = "odds_change_pct"
     }
 }
 

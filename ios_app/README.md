@@ -15,7 +15,7 @@ Python core (`app/predictions/`, `app/models/`, `app/services/`, `app/database/`
 Dodati su samo **read-only mobile endpointi** u `app/api/mobile_routes.py`:
 - `GET /api/v1/status` — bot status + DC engine
 - `GET /api/v1/picks/recent` — poslednji rešeni tipovi
-- `GET /api/v1/odds/tracker` — live 1X2 kvote sa smerom (↑/↓)
+- `GET /api/v1/odds/tracker` — realtime kvote samo za pending tipove (početna vs trenutna + %)
 
 ## UI (Cyber Neon)
 

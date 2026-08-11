@@ -8,7 +8,7 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.database.models import DailyPick, Fixture, OddsSnapshot, Team
+from app.database.models import DailyPick, Fixture, Team
 from app.database.session import get_db
 from app.predictions.probability_layer import is_disabled_market
 from app.utils.model_paths import resolve_dc_params_path
@@ -55,22 +55,13 @@ class SettledPickResponse(BaseModel):
     score: str | None = None
 
 
-class OddsSelectionResponse(BaseModel):
-    odds: float
-    direction: str  # up | down | flat
-
-
 class OddsTrackerRow(BaseModel):
     fixture_id: int
-    match: str
-    home_abbr: str
-    away_abbr: str
-    home_logo: str | None = None
-    away_logo: str | None = None
-    home: OddsSelectionResponse
-    draw: OddsSelectionResponse
-    away: OddsSelectionResponse
-    kickoff: datetime | None = None
+    match_title: str
+    pick_selection: str
+    initial_odds: float
+    current_odds: float
+    odds_change_pct: float
 
 
 class BotStatusResponse(BaseModel):
@@ -91,26 +82,24 @@ def _abbr(name: str, length: int = 4) -> str:
     return (cleaned + "XXXX")[:length]
 
 
-def _odds_direction(current: float, opening: float | None) -> str:
-    if opening is None or opening <= 0:
-        return "flat"
-    delta = (current - opening) / opening
-    if delta >= 0.005:
-        return "up"
-    if delta <= -0.005:
-        return "down"
-    return "flat"
+def _pick_selection_label(market: str, selection: str, line: float | None) -> str:
+    """Human label for the exact tip the bot proposed (not full 1X2 board)."""
+    from app.predictions.market_selection import format_prediction_selection
+
+    base = format_prediction_selection(market, selection, line)
+    return {
+        "Home": "Pobeda Domaćina",
+        "Away": "Pobeda Gosta",
+        "Draw": "Nerešeno",
+    }.get(base, base)
 
 
-def _normalize_selection(raw: str) -> str:
-    value = raw.lower().strip()
-    if value in {"home", "1", "h"}:
-        return "home"
-    if value in {"draw", "x", "d"}:
-        return "draw"
-    if value in {"away", "2", "a"}:
-        return "away"
-    return value
+def _odds_change_pct(initial: float, current: float) -> float:
+    from app.utils.helpers import odds_change_pct
+
+    if initial <= 0 or current <= 0:
+        return 0.0
+    return round(odds_change_pct(initial, current), 6)
 
 
 def _pending_outcome_filter():
@@ -282,98 +271,57 @@ async def get_recent_picks(
 
 @mobile_router.get("/odds/tracker", response_model=list[OddsTrackerRow])
 async def get_odds_tracker(
-    limit: int = Query(5, ge=1, le=20),
+    limit: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ):
-    """Live 1X2 odds rows for upcoming fixtures (today's picks first, then NS fixtures)."""
-    now = datetime.utcnow()
-    today_start = datetime.combine(now.date(), datetime.min.time())
+    """Realtime odds for pending daily picks — only the proposed selection, not full 1X2."""
+    from app.services.odds_warning import median_current_odds_for_pick
 
+    cutoff = datetime.utcnow() - timedelta(days=PICKS_WINDOW_DAYS)
     pick_result = await db.execute(
         select(DailyPick)
-        .where(DailyPick.pick_date >= today_start)
-        .order_by(DailyPick.rank)
-    )
-    fixture_ids: list[int] = []
-    seen: set[int] = set()
-    for pick in pick_result.scalars().all():
-        if pick.fixture_id not in seen:
-            seen.add(pick.fixture_id)
-            fixture_ids.append(pick.fixture_id)
-
-    if len(fixture_ids) < limit:
-        fx_result = await db.execute(
-            select(Fixture)
-            .where(
-                Fixture.fixture_date >= now,
-                Fixture.fixture_date <= now + timedelta(hours=48),
-                Fixture.status == "NS",
-            )
-            .order_by(Fixture.fixture_date)
-            .limit(limit * 2)
+        .where(
+            DailyPick.pick_date >= cutoff,
+            _pending_outcome_filter(),
         )
-        for fixture in fx_result.scalars().all():
-            if fixture.id not in seen:
-                seen.add(fixture.id)
-                fixture_ids.append(fixture.id)
-            if len(fixture_ids) >= limit:
-                break
+        .order_by(DailyPick.pick_date.desc(), DailyPick.rank)
+    )
+    picks = [p for p in pick_result.scalars().all() if not is_disabled_market(p.market)]
 
     rows: list[OddsTrackerRow] = []
-    for fixture_id in fixture_ids[:limit]:
-        fixture = await db.get(Fixture, fixture_id)
-        if not fixture:
+    seen_keys: set[tuple[int, str, str, float | None]] = set()
+    for pick in picks:
+        fixture = await db.get(Fixture, pick.fixture_id)
+        if not fixture or _is_fixture_finished(fixture.status):
             continue
+        dedupe_key = (pick.fixture_id, pick.market, pick.selection, pick.line)
+        if dedupe_key in seen_keys:
+            continue
+        seen_keys.add(dedupe_key)
 
         home = await db.get(Team, fixture.home_team_id)
         away = await db.get(Team, fixture.away_team_id)
         home_name = home.name if home else "Home"
         away_name = away.name if away else "Away"
 
-        odds_result = await db.execute(
-            select(OddsSnapshot).where(
-                OddsSnapshot.fixture_id == fixture_id,
-                OddsSnapshot.market == "match_winner",
-            )
-        )
-        snapshots = odds_result.scalars().all()
-
-        by_sel: dict[str, OddsSnapshot] = {}
-        for snap in snapshots:
-            key = _normalize_selection(snap.selection)
-            existing = by_sel.get(key)
-            if existing is None or snap.captured_at > existing.captured_at:
-                by_sel[key] = snap
-
-        def _build(sel: str, fallback: float = 0.0) -> OddsSelectionResponse:
-            snap = by_sel.get(sel)
-            if not snap:
-                return OddsSelectionResponse(odds=fallback, direction="flat")
-            opening = snap.opening_odds or snap.current_odds
-            return OddsSelectionResponse(
-                odds=round(snap.current_odds, 2),
-                direction=_odds_direction(snap.current_odds, opening),
-            )
-
-        home_odds = _build("home", 0.0)
-        draw_odds = _build("draw", 0.0)
-        away_odds = _build("away", 0.0)
-        if home_odds.odds == 0 and draw_odds.odds == 0 and away_odds.odds == 0:
+        initial = float(pick.odds)
+        if initial <= 1.0:
             continue
+        current = await median_current_odds_for_pick(db, pick)
+        if current is None or current <= 1.0:
+            current = initial
 
         rows.append(
             OddsTrackerRow(
-                fixture_id=fixture_id,
-                match=f"{home_name} vs {away_name}",
-                home_abbr=_abbr(home_name),
-                away_abbr=_abbr(away_name),
-                home_logo=getattr(home, "logo_url", None) if home else None,
-                away_logo=getattr(away, "logo_url", None) if away else None,
-                home=home_odds,
-                draw=draw_odds,
-                away=away_odds,
-                kickoff=fixture.fixture_date,
+                fixture_id=pick.fixture_id,
+                match_title=f"{home_name} vs {away_name}",
+                pick_selection=_pick_selection_label(pick.market, pick.selection, pick.line),
+                initial_odds=round(initial, 2),
+                current_odds=round(float(current), 2),
+                odds_change_pct=_odds_change_pct(initial, float(current)),
             )
         )
+        if len(rows) >= limit:
+            break
 
     return rows
